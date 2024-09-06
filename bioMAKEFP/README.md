@@ -1,5 +1,5 @@
 # bioMAKEFP
-bioMAKEFP is a python script designed to build GAMESS MAKEFP input files for amino acids, ligands, and water molecules within a specified solvation shell. It employs structural data obtained from MD simulations. The script requires `.g96` files representing for both the entire structure and the solvation, along with s well as a `.itp` file that includes atomic charges. For detailed examples and usage, check the `tests` directory. 
+bioMAKEFP is a python script designed to build GAMESS MAKEFP input files for amino acids, ligands, and water molecules within a specified solvation shell. It employs structural data obtained from MD simulations. The script requires `.g96` files representing for both the entire structure and the solvation shell, along with a `.itp` file that includes atomic charges. For detailed examples and usage, check the `tests` directory. 
 
 ## Dependencies
 - **Python 3.8 (Anaconda 2020.11)**
@@ -8,16 +8,16 @@ bioMAKEFP is a python script designed to build GAMESS MAKEFP input files for ami
 ## Usage
 To run the script, you must have the following files in the working directory:
 
-###1. `input_file_1.g96` 
+1. `input_file_1.g96` 
 This structure file corresponds to a snapshot extracted from a curated MD trajectory.
 
-###2. `input_file_2.g96`
+2. `input_file_2.g96`
 This file corresponds to the structure of the solvation shell.  
 
-###3. `input_file_3.itp`
+3. `input_file_3.itp`
 This file contains the atomic charges of the protein and the ligands. The atom ids have to be present and follow the order in the `input_file_1.g96`.
 
-###4. `ligands`
+4. `ligands`
 This file contains the residue names of the ligands as they appear in the `input_file_1.g96`. Each ligand should be listed on a new line.
 
 **Example:**
@@ -25,7 +25,7 @@ This file contains the residue names of the ligands as they appear in the `input
 LIG
 ````
 
-###5. `taas`
+5. `taas`
 This file lists the residue names of the terminal amino acids as they appear in the `input_file_1.g96`. Each terminal amino acid should be listed on a new line.
 
 **Example:**
@@ -50,9 +50,9 @@ To run `bioMAKEFP.py`, use the following command:
 python bioMAKEFP.py <input_file_1.g96> <input_file_2.g96> <input_file_3.itp>
 ```
 
-## Obtaining the Solvation Shell File from GROMACS
+## Obtaining the solvation shell using GROMACS
 
-To obtain the `.g96` file for the solvation shell from GROMACS, follow these steps:
+To obtain the `.g96` file for the solvation shell, follow these steps:
 
 1. **Create an index file for the solvation shell**:
    ```
