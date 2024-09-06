@@ -110,7 +110,7 @@ def main(ifile1,ifile2,ifile3):
         for k in range(0,lenmaplistlig,1):
             fragfile = 'f_%s_%s.inp' %(maplist_resnum_lig[k],s)
             header = (f' $contrl units=angs local=boys runtyp=makefp\n mult=1 '
-                           f'icharg={-1 if maplist_resname[k] in {"ASP", "GLU"} else (1 if maplist_resname[k] in {"ARG", "LYS"} else 0)} '
+                           f'icharg=0 '
                            f'coord=cart icut=11 $end\n $system timlim=99999 mwords=500 $end\n '
                            f'$scf soscf=.f. dirscf=.t. diis=.t. CONV=1.0d-06 $end\n $basis gbasis=n31 ngauss=6\n ndfunc=1 $end\n '
                            f'$local maxloc=1000 $end\n $DAMP IFTTYP(1)=2,0 IFTFIX(1)=1,1 thrsh=500.0 $end\n '
@@ -154,7 +154,7 @@ def main(ifile1,ifile2,ifile3):
                     fragment_data[fragfile].append(f' N      {anum}   {x:.8f}   {y:.8f}   {z:.8f}\n')
                 elif line2[2][0] == 'S':
                     anum = 16.0
-                    fragment_data[fragfile].append(f' S      {anum}   {x:.8f}   {y:.8f}   {z:.8f}\n')
+                    fragment_data[fragfile].append(f' S     {anum}   {x:.8f}   {y:.8f}   {z:.8f}\n')
                 elif line2[2][0] == 'F':
                     anum = 9.0
                     fragment_data[fragfile].append(f' F      {anum}   {x:.8f}   {y:.8f}   {z:.8f}\n')
