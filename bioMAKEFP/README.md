@@ -71,7 +71,7 @@ To obtain the `.g96` file for the solvation shell, follow these steps:
    ```
 
 ## Limitations
-1. Terminal amino acids present in the solvation shell are excluded for the generation of their associated GAMESS MAKEFP input files if they appear in the solvation shell.
+1. Terminal amino acids are excluded for the generation of their associated GAMESS MAKEFP input files if they appear in the solvation shell.
 
 2. The script currently does not handle sulfur bridges if they are present in the solvation shell.
 
