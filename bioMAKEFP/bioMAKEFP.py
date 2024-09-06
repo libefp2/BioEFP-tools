@@ -19,9 +19,8 @@ Version 1.1.0 : YYYY-MM-DD
     - Fixed bug Y.
 """
 import time
+import configparser
 import sys
-import os
-import numpy
 import math
 import subprocess
 import re
@@ -35,19 +34,19 @@ def main(ifile1,ifile2,ifile3):
     print("Running script version:", __version__)
 
     ligands = []
-    ligand_name = input("Enter the resname of the ligand as it appears in the G96 file (or 'done' to finish): ")
-    while ligand_name.lower() != 'done':
-        ligands.append(ligand_name)
-        ligand_name = input("Enter the resname of the ligand as it appears in the G96 file (or 'done' to finish): ")
+
+    # Open and read the ligands file
+    with open('ligands', 'r') as file:
+        ligands = [line.strip() for line in file]
 
     taas = []
-    taa_name = input("Enter the resname of the terminal amino acid as it appears in the G96 file (or 'done' to finish): ")
-    while taa_name.lower() != 'done':
-        taas.append(taa_name)
-        taa_name = input("Enter the resname of the terminal amino acid as it appears in the G96 file (or 'done' to finish): ")
+    with open('taas', 'r') as file:
+        taas = [line.strip() for line in file]
 
-    response = input("Do you want to make the GAMESS MAKEFP input file for your ligands? Please enter 'y' for yes or 'n' for no: ").strip().lower()
-    response_sf = input("Do you want to create the MM superfragment EFP file? Please enter 'y' for yes or 'n' for no: ").strip().lower()
+    config = configparser.ConfigParser()
+    config.read('settings')
+    ligs = config.get('Settings', 'ligands')
+    sf = config.get('Settings', 'sf')
 
     regex = re.compile(r'\d+')
     s = regex.search(ifile2).group(0)
@@ -69,7 +68,7 @@ def main(ifile1,ifile2,ifile3):
 
     for i in range(4,lastlines2,1):
         line2 = lines2[i].split()
-        if response == 'y':
+        if ligs == 'yes':
             if line2[0] not in maplist_resnum_lig and line2[1] in ligands:
                 maplist_resnum_lig.append(line2[0])
         if line2[0] not in maplist_resnum and line2[1] not in taas and line2[1] not in ligands:
@@ -85,7 +84,7 @@ def main(ifile1,ifile2,ifile3):
             maplist_resnum_c.append(line2[0])
             maplist_xcoord_c.append(line2[4])
 
-    if response == 'y':
+    if ligs == 'yes':
         lenmaplistlig = len(maplist_resnum_lig)
     lenmaplist = len(maplist_resnum)
     lenmaplist_resnum_ca = len(maplist_resnum_ca)
@@ -107,7 +106,7 @@ def main(ifile1,ifile2,ifile3):
     fragment_data = {}
 
     #GAMESS input file header
-    if response == 'y':
+    if ligs == 'yes':
         for k in range(0,lenmaplistlig,1):
             fragfile = 'f_%s_%s.inp' %(maplist_resnum_lig[k],s)
             header = (f' $contrl units=angs local=boys runtyp=makefp\n mult=1 '
@@ -129,7 +128,7 @@ def main(ifile1,ifile2,ifile3):
         fragment_data[fragfile] = [header]
 
     #Ligands, do not need capping
-    if response == 'y':
+    if ligs == 'yes':
         for i in range(4,lastlines2,1):
             line2 = lines2[i].split()
             if line2[0] in maplist_resnum_lig:
@@ -285,7 +284,7 @@ def main(ifile1,ifile2,ifile3):
 # that are not in the solvation shell)
 #=================================================
 
-    if response_sf == 'y':
+    if sf == 'yes':
 
         superfragfile = 'sf_%s.efp' %s
         sfganum = -1
