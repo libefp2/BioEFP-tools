@@ -62,7 +62,7 @@ To obtain the `.g96` file for the solvation shell, follow these steps:
 
 1. **Create an index file for the solvation shell**:
    ```
-   gmx select -f input_file_1.g96 -s input_file_1.g96 -on input_file_2 -select '`...`'
+   gmx select -f input_file_1.g96 -s input_file_1.g96 -on input_file_2 -select '...'
    ```
 
 2. **Extract the solvation shell structure**:
