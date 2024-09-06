@@ -8,16 +8,20 @@ bioMAKEFP is a python script designed to build GAMESS MAKEFP input files for ami
 ## Usage
 To run the script, you must have the following files in the working directory:
 
-1. `input_file_1.g96` 
+1. `input_file_1.g96`
+ 
     This structure file corresponds to a snapshot extracted from a curated MD trajectory.
 
 2. `input_file_2.g96`
+
     This file corresponds to the structure of the solvation shell.  
 
 3. `input_file_3.itp`
+
     This file contains the atomic charges of the protein and the ligands. The atom ids have to be present and follow the order in the `input_file_1.g96`.
 
 4. `ligands`
+
     This file contains the residue names of the ligands as they appear in the `input_file_1.g96`. Each ligand should be listed on a new line.
 
     **Example:**
@@ -26,6 +30,7 @@ To run the script, you must have the following files in the working directory:
     ```
 
 5. `taas`
+
     This file lists the residue names of the terminal amino acids as they appear in the `input_file_1.g96`. Each terminal amino acid should be listed on a new line.
 
     **Example:**
@@ -35,6 +40,7 @@ To run the script, you must have the following files in the working directory:
     ```
 
 6. `settings`
+
     This file is used to configure key settings. It allows you to enable or disable certain parts of the workflow.
 
     **Example:**
@@ -73,6 +79,7 @@ To obtain the `.g96` file for the solvation shell, follow these steps:
 ## Author
 
 **Andres S. Urbina**
+
 asurbinab@gmail.com
 
 For any inquiries or feedback, please contact Andres S. Urbina.
