@@ -1,5 +1,5 @@
 # bioMAKEFP
-bioMAKEFP is a python script designed to build GAMESS MAKEFP input files for amino acids, ligands, and water molecules within a specified solvation shell. It employs structural data obtained from MD simulations. The script requires `.g96` files representing for both the entire structure and the solvation shell, along with a `.itp` file that includes atomic charges. For detailed examples and usage, check the `tests` directory. 
+bioMAKEFP is a python script designed to build GAMESS MAKEFP input files for amino acids, ligands, and water molecules within a specified solvation shell. It employs structural data obtained from MD simulations. The script requires `.g96` files representing both the entire structure and the solvation shell, along with a `.itp` file that includes atomic charges. For detailed examples and usage, check the `tests` directory. 
 
 ## Dependencies
 - **Python 3.8 (Anaconda 2020.11)**
@@ -71,15 +71,13 @@ To obtain the `.g96` file for the solvation shell, follow these steps:
    ```
 
 ## Limitations
-1. Terminal amino acids present in the solvation shell are not used to generate their associated GAMESS MAKEFP input files.
+1. Terminal amino acids present in the solvation shell are excluded for the generation of their associated GAMESS MAKEFP input files if they appear in the solvation shell.
 
 2. The script currently does not handle sulfur bridges if they are present in the solvation shell.
+
+3. The charge of the ligand is 0. 
 
 
 ## Author
 
 **Andres S. Urbina**
-
-asurbinab@gmail.com
-
-For any inquiries or feedback, please contact Andres S. Urbina.
