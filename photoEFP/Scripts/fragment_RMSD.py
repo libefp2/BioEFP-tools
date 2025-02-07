@@ -3,6 +3,16 @@
 Created on Tue Aug 14 2024
 
 @author: jackl
+
+Sample execution:
+    fragment_RMSD.py a_33_473.inp
+
+This file reads the coordinates from a GAMESS input file (.inp) and searches through every efp paramter 
+file (.efp) in a given directory for a good geometric match. base_directory should be a folder that 
+contains more folders of specific amino acid (or any fragment) structures. For example, the directory used 
+here is efpdb/, which contains folders ala/, val/, glu/, etc. This script assumes the input file is named
+such that the first letter indicates the amino acid and it will search the folder matching that amino acid 
+(execution on file a_33_473.inp will search and compare efp files from directory ala/).
 """
 
 import sys
