@@ -20,10 +20,12 @@ It then builds an output file containing:
 
 import sys
 import os
+import numpy as np
 
 # List of atom symbols to treat as exceptions (printed as full two-letter symbol 
 #    rather than first character)
 ATOM_EXCEPTIONS = ['MG']
+RESNAME='bcl'
 
 def build_header(efp_order):
     """
@@ -61,7 +63,8 @@ def build_header(efp_order):
         'efp_order = '+efp_order+' \n',
         '$end\n\n',
         '$molecule\n',
-        '0 1\n'
+        '0 1\n',
+        '    C1'
     ]
     return header_lines
 
@@ -100,7 +103,7 @@ def build_efp_atom_lists():
         # Skip water and classical region files.
         if filename in ('water.efp', 'prot.efp'):
             continue
-        if filename.startswith('cla'):
+        if filename.startswith(RESNAME):
             continue
         if filename.endswith('.efp'):
             # Remove the extension and extract the starting atom number.
@@ -112,6 +115,33 @@ def build_efp_atom_lists():
             efp_atoms.extend([str(efp_atom_start), str(efp_atom_start + 1), str(efp_atom_start + 2)])
     return efp_dict, efp_atoms
 
+def cut_frag(head, tail):
+    """    
+    This function uses the coordinates from two atoms (head and tail) to compute
+    the positions for adding virtual hydrogens to cap the now-separated fragments
+    (along the vector that is the C5-C6 bond).
+    
+    Parameters:
+        head: A string line with the head atom lines.
+        tail: A string line with the tail atom lines.
+    
+    Returns:
+        h_t: coordinates [x, y, z] for the virtual hydrogen on the head side.
+        t_h: coordinates [x, y, z] for the virtual hydrogen on the tail side.
+    """
+    desired_dist = 1.07886  # Desired bond distance
+    # Scale coordinates by 10 (nm -> angstrom)
+    xh, yh, zh = [float(head.split()[i]) * 10 for i in range(4, 7)]
+    xt, yt, zt = [float(tail.split()[i]) * 10 for i in range(4, 7)]
+    # Calculate the magnitude of the distance vector between head and tail.
+    dist_mag = np.sqrt((xh - xt)**2 + (yh - yt)**2 + (zh - zt)**2)
+    # Compute the new coordinates along the head-to-tail vector.
+    h_t = [
+        ((xt - xh) * desired_dist / dist_mag) + xh,
+        ((yt - yh) * desired_dist / dist_mag) + yh,
+        ((zt - zh) * desired_dist / dist_mag) + zh
+    ]
+    return h_t
 
 def process_qm_file_lines(qm_lines):
     """
@@ -129,12 +159,24 @@ def process_qm_file_lines(qm_lines):
     """
     outlines = []
     start = False
+    bridge_atoms=[]
     for line in qm_lines:
-        # When we reach the boundary marker, finish the QM section.
+        # When we reach the boundary marker, finish the QM section, find bonds to cap.
         if 'boundary' in line:
-            break
+            start=2
+        elif start==2:
+            bridge_atoms.append(line)
+            if(len(bridge_atoms)==2):
+                virt_coords=cut_frag(bridge_atoms[0],bridge_atoms[1])
+                col1='H '.rjust(6)
+                col2 = f"{virt_coords[0]:.8f}".rjust(15)
+                col3 = f"{virt_coords[1]:.8f}".rjust(15)
+                col4 = f"{virt_coords[2]:.8f}".rjust(15)
+                outlines.append(f"{col1}{col2}{col3}{col4}\n")
+                bridge_atoms=[]
+                start=0
         # After 'QM_atoms' is encountered, process lines with sufficient columns.
-        elif start and (len(line.split()) > 4):
+        elif start==1 and (len(line.split()) > 4):
             # Format the atom label:
             tokens = line.split()
             # Use full label if the atom is in exceptions, otherwise take the first letter.
@@ -303,15 +345,37 @@ def main(g96_filename,efp_filename,qm_filename):
     test_mm_lines = process_prot('prot.efp')
     outlines.extend(test_mm_lines)
     
+    outlines.append('$end\n')
+    outlines.append('\n')
+    outlines.append('@@@\n')
+    outlines.append('\n')
+    
     # Append updated header lines (with efp_order updated) at the end.
     updated_header = build_header('2')
     for line in updated_header:
         outlines.append(line)
     
+    # Process QM input file lines to create coordinate lines for the fragment.
+    qm_outlines = process_qm_file_lines(qm_lines)
+    outlines.extend(qm_outlines)
+    
+    # Process structure coordinates from the g96 file.
+    g96_coords = process_structure_coords(g96_lines, efp_atoms, efp_dict)
+    outlines.extend(g96_coords)
+    
+    # Process water molecule coordinates from the structure file.
+    water_coords = process_water_coords(efp_lines)
+    outlines.extend(water_coords)
+    
+    # Process classical fragment file 'prot.efp' and append converted coordinate lines.
+    test_mm_lines = process_prot('prot.efp')
+    outlines.extend(test_mm_lines)
+    
     # Write the final output to a file.
     with open('test_file', 'w') as f:
         for line in outlines:
             f.write(line)
+        f.write('$end')
 
 if __name__ == "__main__":
     main(sys.argv[1],sys.argv[2],sys.argv[3])

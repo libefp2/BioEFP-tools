@@ -3,16 +3,6 @@
 Created on Tue Aug 14 2024
 
 @author: jackl
-
-Sample execution:
-    fragment_RMSD.py a_33_473.inp
-
-This file reads the coordinates from a GAMESS input file (.inp) and searches through every efp paramter 
-file (.efp) in a given directory for a good geometric match. base_directory should be a folder that 
-contains more folders of specific amino acid (or any fragment) structures. For example, the directory used 
-here is efpdb/, which contains folders ala/, val/, glu/, etc. This script assumes the input file is named
-such that the first letter indicates the amino acid and it will search the folder matching that amino acid 
-(execution on file a_33_473.inp will search and compare efp files from directory ala/).
 """
 
 import sys
@@ -28,7 +18,7 @@ base_directory = '/depot/lslipche/data/yb_boss/flexible_efp/efpdb/'
 ang_cutoff = 0.20                        # Minimum RMSD allowed for a "good" match (in Angstroms)
 bohr_cutoff = ang_cutoff * 1.8897259886  # Convert Angstrom cutoff to Bohr
 
-#Add to these if there are more residue names than are listed
+#Add to these if there are more 
 amino_acid_dict = {
     'a': 'ala', 'r': 'arg', 'n': 'asn', 'd': 'asp', 'c': 'cys',
     'q': 'gln', 'e': 'glu', 'g': 'gly', 'h': 'hip', 'i': 'ile',

@@ -31,7 +31,7 @@ def get_specials(lines):
     and the atom indexes for which only the polarizable points should be removed.
     
     The function looks for keywords 'erased:' and 'remove:' in the lines.
-        -make_AAs.py added these comments.
+        -make_AAs_V2.py added these comments.
     
     Reads:
         lines: input file (.inp) lines.

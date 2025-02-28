@@ -26,7 +26,7 @@ import sys
 # Input Files and Command Line Arguments
 # ---------------------------
 # Get input filenames from command line
-# Sample execution: python make_AAs.py efp_pair53004.g96 confout_pair53004.g96 user_defined.txt topol.top
+# Sample execution: python make_AAs_V2.py efp_pair53004.g96 confout_pair53004.g96 user_defined.txt topol.top
 
 efp_g96 = sys.argv[1]     # EFP file ("efp_pair53004.g96")
 full_g96 = sys.argv[2]    # Full configuration file ("confout_pair53004.g96")

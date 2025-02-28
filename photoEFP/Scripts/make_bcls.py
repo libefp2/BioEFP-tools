@@ -16,22 +16,56 @@ need to edit this script.
 
 import numpy as np
 import sys
+import os
 
 # ---------------------------
 # Input files and cutting definitions
 # ---------------------------
 # Command-line arguments:
-# Sample execution: python make_bcls.py efp_opt_83855.g96 optimized_83855.g96
-g96_file = sys.argv[1]        # EFP region file (e.g., "efp_opt_83855.g96")
-full_g96_file = sys.argv[2]   # Full configuration file (e.g., "optimized_83855.g96")
+# Sample execution: python make_bcls_V2.py efp_opt_83855.g96 optimized_83855.g96
+g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
+full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
+
+RESNAME='BCL'                #Name of the residue that this script must parse into sub-fragments
 
 # Settings for fragment splitting. the bond between atoms C5 and C6 is where the fragments split.
-tailside = 'C6'             # Atom name defining the tail side boundary
-headside = 'C5'             # Atom name defining the head side boundary
+tailside = 'CAA'             # Atom name defining the tail side boundary
+headside = 'C2A'             # Atom name defining the head side boundary
 
 # List of QM residue IDs. If you want all CLA/BCL residues to be made into fragments, make this empty
-site = ['752', '754', '753', '790', '792', '793']  
-oldres = '751'              # Initial residue number for tracking changes
+site = ['361']  
+#site=''  
+oldres = 'nan'               # Initial residue number for tracking changes
+
+# ---------------------------
+# Global Dictionaries and Lists
+# ---------------------------
+# Dictionary to format atomic symbols to numbers (for output).
+at_sym = {
+    'H': '1.0', 'C': '6.0', 'N': '7.0', 'O': '8.0', 'MG': '12.0',
+    'P': '15.0', 'S': '16.0', 'FE': '26.0', 'NA': '11.0', 'CL': '17.0'
+}
+
+# List of headring atoms. List includes names for YB's BCL and Reppert group's CLA.
+'''
+#Atom names below were used in a version of this script to treat CLA-a rather than BCL-a
+Rings = [
+    'MG','CHA','CHB','CHC','CHD','NA','C1A','C2A','C3A','C4A','CMA','NB',
+    'C1B','C2B','C3B','C4B','CMB','CAB','CBB','NC','C1C','C2C','C3C','C4C',
+    'CMC','CAC','CBC','ND','C1D','C2D','C3D','C4D','CMD','CAD','OBD','CBD',
+    'CGD','O1D','O2D','CED','CAA','CBA','CGA','O1A','O2A','C1','C2','C3','C4',
+    'C5','H1','H2','H3','H4','H5','H6','H7','H8','H9','H10','H11','H12','H13',
+    'H14','H15','H16','H17','H18','H19','H20','H21','H22','H23','H24','H25',
+    'H26','H27','H28','H29','H30','H31','H32','H33','H34','H35','H36','H37',
+    'H38','H39','H40','H41'
+]
+'''
+Rings=['MG','CHA','CHB','HB','CHC','HC','CHD','HD','NA','C1A','C2A','H2A','C3A','H3A','C4A',
+       'CMA','HMA1','HMA2','HMA3','NB','C1B','C2B','C3B','C4B','CMB','HMB1','HMB2','HMB3',
+       'CAB','OBB','CBB','HBB1','HBB2','HBB3','NC','C1C','C2C','H2C','C3C','H3C','C4C',
+       'CMC','HMC1','HMC2','HMC3','CAC','HAC1','HAC2','CBC','HBC1','HBC2','HBC3','ND',
+       'C1D','C2D','C3D','C4D','CMD','HMD1','HMD2','HMD3','CAD','OBD','CBD','HBD','CGD',
+       'O1D','O2D','CED','HED1','HED2','HED3']
 
 # ---------------------------
 # Function Definitions
@@ -86,9 +120,9 @@ def make_inp(fragment):
     
     # Choose a filename prefix based on whether the first fragment line contains 'MG'
     if 'MG' in fragment[0]:
-        namestart = 'clah_'
+        namestart = RESNAME.lower()+'h_'
     else:
-        namestart = 'clat_'
+        namestart = RESNAME.lower()+'t_'
     filename = namestart + resnum + '_' + atomid + '.inp'
     
     # Construct the header for the input file.
@@ -96,7 +130,7 @@ def make_inp(fragment):
     header = (
         " $contrl units=angs local=boys runtyp=makefp \n"
         "       mult=1 icharg=0 coord=cart icut=11 $end\n"
-        " $system timlim=99999   mwords=4000 $end\n"
+        " $system timlim=99999 memddi=0  mwords=200 $end\n"
         " $scf soscf=.f. dirscf=.t. diis=.t. CONV=1.0d-06  $end\n"
         " $basis gbasis=n31 ngauss=6 ndfunc=1 $end\n"
         " $DAMP IFTTYP(1)=2,0 IFTFIX(1)=1,1 thrsh=500.0 $end\n"
@@ -144,27 +178,7 @@ def make_inp(fragment):
     # Write the output to a file.
     with open(filename, 'w') as outfile:
         outfile.writelines(txt)
-
-# ---------------------------
-# Global Dictionaries and Lists
-# ---------------------------
-# Dictionary to format atomic symbols to numbers (for output).
-at_sym = {
-    'H': '1.0', 'C': '6.0', 'N': '7.0', 'O': '8.0', 'MG': '12.0',
-    'P': '15.0', 'S': '16.0', 'FE': '26.0', 'NA': '11.0', 'CL': '17.0'
-}
-
-# List of headring atoms. List includes names for YB's BCL and Reppert group's CLA.
-Rings = [
-    'MG','CHA','CHB','CHC','CHD','NA','C1A','C2A','C3A','C4A','CMA','NB',
-    'C1B','C2B','C3B','C4B','CMB','CAB','CBB','NC','C1C','C2C','C3C','C4C',
-    'CMC','CAC','CBC','ND','C1D','C2D','C3D','C4D','CMD','CAD','OBD','CBD',
-    'CGD','O1D','O2D','CED','CAA','CBA','CGA','O1A','O2A','C1','C2','C3','C4',
-    'C5','H1','H2','H3','H4','H5','H6','H7','H8','H9','H10','H11','H12','H13',
-    'H14','H15','H16','H17','H18','H19','H20','H21','H22','H23','H24','H25',
-    'H26','H27','H28','H29','H30','H31','H32','H33','H34','H35','H36','H37',
-    'H38','H39','H40','H41'
-]
+    #os.system('gms_slurm -p 64 -q standby -v 2023 ' + filename)
 
 # ---------------------------
 # File Reading and Fragment Identification
@@ -180,7 +194,7 @@ with open(full_g96_file, 'r') as g96:
 # Identify residue numbers (from lines containing 'CLA') in the EFP file that are not in the 'site' list.
 frag_cla_resnums = []
 for line in efp_lines:
-    if 'CLA' in line:
+    if RESNAME in line:
         res_num = line.split()[0]
         if res_num in frag_cla_resnums:
             continue
@@ -197,10 +211,11 @@ curr_tail = []   # append lines for the "tail" fragment
 head_cut = ''    # Temporary storage for the head atom used for virtual bond creation
 
 # Process each line in the full configuration file.
+print(frag_cla_resnums)
 for line in full_lines:
-    if 'CLA' in line:
+    if RESNAME in line:
         # Process only for fragments with residue numbers in our list.
-        if line.split()[0] in frag_cla_resnums and (oldres != line.split()[0]):
+        if oldres in frag_cla_resnums and (oldres != line.split()[0]):
             # If no head_cut has been found, update oldres and continue.
             if len(head_cut) < 3:
                 oldres = line.split()[0]
@@ -231,10 +246,11 @@ for line in full_lines:
             # Reset the current fragment accumulators.
             curr_head = []
             curr_tail = []
-            oldres = line.split()[0]
+            #oldres = line.split()[0]
         
         # Get the current atom name.
         atomname = line.split()[2]
+        #oldres=line.split()[0]
         # Append the line into the desired fragment based on the Rings list.
         if line.split()[0] in frag_cla_resnums:
             if atomname in Rings:
@@ -246,3 +262,4 @@ for line in full_lines:
                 tail_cut = line
             elif atomname == headside:
                 head_cut = line
+    oldres=line.split()[0]
