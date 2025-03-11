@@ -361,7 +361,7 @@ def get_header(lines, input_name):
     header = []
     fragname = input_name.split('.')[0]
     for line in lines:
-        header.append(line.replace('$FRAGNAME', fragname))
+        header.append(line.replace('FRAGNAME', fragname))
         # Stop adding header lines once the COORDINATES section is encountered.
         if 'COORDINATES (BOHR)' in line:
             return header
@@ -423,7 +423,7 @@ def main(inp, efp):
         for outline in keep_dip:
             outfile.write(outline)
         # Write quadrupoles section.
-        outfile.write(' STOP\nQUADRPOLES\n')
+        outfile.write(' STOP\nQUADRUPOLES\n')
         for outline in keep_quadrup:
             outfile.write(outline)
         # Write octupoles section.

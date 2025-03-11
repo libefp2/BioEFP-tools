@@ -5,7 +5,7 @@ Created on Wed Dec  4 12:33:41 2024
 @author: jackl
 
 Sample execution:
-    python cut_qm.py pair_83855.g96 efp_pair_83855.g96 qm_file.inp
+    python make_final.py pair_83855.g96 efp_pair_83855.g96 user_defined.txt
 
 This script reads in three files:
   - A structure file in .g96 format (e.g. pair_83855.g96)
@@ -63,8 +63,7 @@ def build_header(efp_order):
         'efp_order = '+efp_order+' \n',
         '$end\n\n',
         '$molecule\n',
-        '0 1\n',
-        '    C1'
+        '0 1\n'
     ]
     return header_lines
 
@@ -274,7 +273,7 @@ def process_water_coords(efp_lines):
             outlines.append(f"{col1}{col2}{col3}{col4}\n")
         elif found_water > 0:
             # For subsequent lines, assign hydrogen labels.
-            col1 = ('A01H' + str(3 - found_water)).ljust(8)
+            col1 = ('A0'+str(4-found_water)+'H' + str(3 - found_water)).ljust(8)
             x, y, z = [float(line.split()[i]) * 10 for i in range(4, 7)]
             col2 = f"{x:.8f}".rjust(13)
             col3 = f"{y:.8f}".rjust(13)
@@ -343,6 +342,7 @@ def main(g96_filename,efp_filename,qm_filename):
     
     # Process classical fragment file 'prot.efp' and append converted coordinate lines.
     test_mm_lines = process_prot('prot.efp')
+    outlines.extend('prot.efp\n')
     outlines.extend(test_mm_lines)
     
     outlines.append('$end\n')
@@ -369,6 +369,7 @@ def main(g96_filename,efp_filename,qm_filename):
     
     # Process classical fragment file 'prot.efp' and append converted coordinate lines.
     test_mm_lines = process_prot('prot.efp')
+    outlines.extend('prot.efp\n')
     outlines.extend(test_mm_lines)
     
     # Write the final output to a file.

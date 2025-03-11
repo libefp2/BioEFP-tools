@@ -9,10 +9,17 @@ import sys
 import numpy as np
 import os
 
+'''
+Sample Execution: python fragment_RMSD.py a_22_304.inp
 
+This file takesa GAMESS input file, then searches 'base_directory' for a folder that matches the 
+fragment type (if it is an amino acid). If no folder is found, a message will be printed.
+If no good match is found, a different message will be printed. Alternatively, you can uncomment
+a line near the end of this file to automatically run GAMESS for an amino acid fragment that did
+not find a good match.
 
-
-# Directory containing the library files. CHANGE#######################################
+'''
+# Directory containing the library files. CHANGE
 base_directory = '/depot/lslipche/data/yb_boss/flexible_efp/efpdb/'
 
 ang_cutoff = 0.20                        # Minimum RMSD allowed for a "good" match (in Angstroms)

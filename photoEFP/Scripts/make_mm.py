@@ -4,6 +4,8 @@ Created on Wed Sep 18 12:28:23 2024
 
 @author: jackl
 
+Sample execution: python make_mm.py efp_pair53004.g96 confout_pair53004.g96 topol.top
+
 This script reads in EFP region file (.g96), a full structure file (.g96), and a topology file (.top or .itp)
 to extract MM (molecular mechanics) coordinates, charges, and screening parameters.The extracted information 
 is then written to an output file ("prot.efp").
@@ -347,7 +349,4 @@ def main(efp_g96, full_g96, topol_file):
 
 
 if __name__ == "__main__":
-    # Example usage: python script.py efp_pair53004.g96 confout_pair53004.g96 edit_topol.itp
     main(sys.argv[1], sys.argv[2], sys.argv[3])
-    # For testing:
-    # main('efp_pair53004.g96', 'confout_pair53004.g96', 'edit_topol.itp')

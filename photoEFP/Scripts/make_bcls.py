@@ -4,6 +4,9 @@ Created on Tue Jul 16 14:42:41 2024
 
 @author: jackl
 
+
+Sample execution: python make_bcls_V2.py efp_opt_83855.g96 optimized_83855.g96
+
 This script reads in a .g96 file of the EFP region and a full configuration .g96 file,
 and then creates .inp files for bacteriochlorophyll a molecules. In this process, the
 head and tail groups are treated as separate fragments. 
@@ -22,7 +25,7 @@ import os
 # Input files and cutting definitions
 # ---------------------------
 # Command-line arguments:
-# Sample execution: python make_bcls_V2.py efp_opt_83855.g96 optimized_83855.g96
+
 g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
 full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
 
@@ -211,7 +214,6 @@ curr_tail = []   # append lines for the "tail" fragment
 head_cut = ''    # Temporary storage for the head atom used for virtual bond creation
 
 # Process each line in the full configuration file.
-print(frag_cla_resnums)
 for line in full_lines:
     if RESNAME in line:
         # Process only for fragments with residue numbers in our list.
