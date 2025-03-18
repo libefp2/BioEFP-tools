@@ -101,10 +101,11 @@ def get_MM_coords(mm_indexes, g96_lines):
             temp_MMs.append(col1 + '%20.12f' % col2 + '%20.12f' % col3 + '%20.12f' % col4 + '\n')
             '''
             x, y, z = [float(parts[i]) * conversion for i in range(4, 7)]
-            col2 = f"{x:.12f}".rjust(20)
-            col3 = f"{y:.12f}".rjust(20)
-            col4 = f"{z:.12f}".rjust(20)
-            temp_MMs.append(f"{col1}{col2}{col3}{col4}\n")
+            col2 = f"{x:.12f}".rjust(17)
+            col3 = f"{y:.12f}".rjust(18)
+            col4 = f"{z:.12f}".rjust(18)
+            col5 ='     0.00000001    0.000000005'
+            temp_MMs.append(f"{col1}{col2}{col3}{col4}{col5}\n")
 
         else:
             # For non-"C"/"O" lines, check if the residue matches the expected mm_indexes information.
@@ -118,10 +119,11 @@ def get_MM_coords(mm_indexes, g96_lines):
                 col1 = parts[2][0] + parts[3]
                 col1 = col1.ljust(7)
                 x, y, z = [float(parts[i]) * conversion for i in range(4, 7)]
-                col2 = f"{x:.12f}".rjust(20)
-                col3 = f"{y:.12f}".rjust(20)
-                col4 = f"{z:.12f}".rjust(20)
-                MMs.append(f"{col1}{col2}{col3}{col4}\n")
+                col2 = f"{x:.12f}".rjust(17)
+                col3 = f"{y:.12f}".rjust(18)
+                col4 = f"{z:.12f}".rjust(18)
+                col5 ='     0.00000001    0.000000005'
+                MMs.append(f"{col1}{col2}{col3}{col4}{col5}\n")
                 prev_MM_flag = 1
             else:
                 prev_MM_flag = 0
@@ -151,9 +153,9 @@ def get_MM_charges(mm_indexes, topol_lines):
     for line in topol_lines:
         # When reaching the [ bonds ] section, finish processing by adding charges for remaining mm_indexes.
         if '[ bonds ]' in line:
-            # Parse last processed charge to determine atom id for subsequent water/ion entries.
+            # Determine atom id for subsequent water/ion entries.
             atomid_str = MMs[-1].split()[0]
-            # Example: if atom label is like "O12", extract "12"
+            # Example: if atom label is "O12", extract "12"
             atomid = int(atomid_str[1:])  
             while index < len(mm_indexes):
                 # No need to "read" water charges. TIP3P is desired model.
@@ -161,21 +163,21 @@ def get_MM_charges(mm_indexes, topol_lines):
                     atomid += 1
                     col1 = ('O' + str(atomid)).ljust(7)
                     col2 = water_and_ions['SOL']
-                    MMs.append(col1 + '%21.10f\n' % col2)
+                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
                     # For water, assign half the oxygen charge, changed to positive
                     col2 = water_and_ions['SOL'] / (-2)
                     atomid += 1
                     col1 = ('H' + str(atomid)).ljust(7)
-                    MMs.append(col1 + '%21.10f\n' % col2)
+                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
                     atomid += 1
                     col1 = ('H' + str(atomid)).ljust(7)
-                    MMs.append(col1 + '%21.10f\n' % col2)
+                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
                 else:
                     atomid += 1
                     col1 = (mm_indexes[index][1][0] + str(atomid)).ljust(7)
                     # Ion charge found by atom name
                     col2 = water_and_ions[mm_indexes[index][1]]
-                    MMs.append(col1 + '%21.10f\n' % col2)
+                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
                 index += 1
             return MMs
 
@@ -194,7 +196,7 @@ def get_MM_charges(mm_indexes, topol_lines):
             col1 = parts[1][0] + parts[0]
             col1 = col1.ljust(7)
             col2 = float(parts[6])
-            temp_MMs.append(col1 + '%21.10f\n' % col2)
+            temp_MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
         else:
             # Check if the current residue matches mm_indexes.
             if parts[2] == mm_indexes[index][0] and parts[3] == mm_indexes[index][1]:
@@ -205,7 +207,7 @@ def get_MM_charges(mm_indexes, topol_lines):
                 col1 = parts[4][0] + parts[0]
                 col1 = col1.ljust(7)
                 col2 = float(parts[6])
-                MMs.append(col1 + '%21.10f\n' % col2)
+                MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
                 prev_MM_flag = 1
             else:
                 prev_MM_flag = 0
@@ -236,7 +238,7 @@ def charges_from_spec_topol(topol_lines, last_atom):
         if line[0] != ' ':
             continue
         # Atom ID in topology is not "correct." Instead of using this, take last_atom to be the 
-        #    'continuation' point.
+        #    continuation point.
         else:
             i += 1
             col2 = f"{float(line.split()[6]):14.10f}"
@@ -245,13 +247,72 @@ def charges_from_spec_topol(topol_lines, last_atom):
             outlines.append(f"{col1}{col2}{col3}\n")
     return outlines
 
+def get_dipoles(charges):
+    """
+    Generate dipoles for a list of charge lines.
+    For each atom in charges, a dipole is produced with fixed parameters.
+    These terms are not "read" or generated. They are all the same.
+    
+    Parameters:
+        charges (list of str): List of formatted charge lines.
+        
+    Returns:
+        dipoles (list of str): Formatted screening lines.
+    """
+    dipoles = []
+    #every atom that has charges listed also needs screen paramters.
+    for atom in charges:
+        col1 = atom.split()[0]
+        col1 = col1.ljust(7)
+        # Screening parameters are fixed (e.g., vdW scaling and cutoff)
+        col2 = '  0.0000000000        0.0000000000        0.0000000000\n'
+        dipoles.append(col1 + col2)
+    return dipoles
+
+def get_quadrupoles(charges):
+    """
+    Generate quadrupole lines like previous finctions.
+    Parameters:
+        charges (list of str): List of formatted charge lines.
+        
+    Returns:
+        quadrupoles (list of str): Formatted screening lines.
+    """
+    quads = []
+    #every atom that has charges listed also needs screen paramters.
+    for atom in charges:
+        col1 = atom.split()[0]
+        col1 = col1.ljust(7)
+        # Screening parameters are fixed (e.g., vdW scaling and cutoff)
+        col2 = '  0.0000000000        0.0000000000        0.0000000000        0.0000000000 >\n'
+        quads.append(col1 + col2)
+        quads.append('        0.0000000000        0.0000000000\n')
+    return quads
+
+def get_octupoles(charges):
+    """
+    Generate octupole lines like previous finctions.
+    Parameters:
+        charges (list of str): List of formatted charge lines.
+        
+    Returns:
+        octupoles (list of str): Formatted screening lines.
+    """
+    octs = []
+    #every atom that has charges listed also needs screen paramters.
+    for atom in charges:
+        col1 = atom.split()[0]
+        col1 = col1.ljust(7)
+        # Screening parameters are fixed (e.g., vdW scaling and cutoff)
+        col2 = '  0.0000000000        0.0000000000        0.0000000000        0.0000000000 >\n'
+        octs.append(col1 + col2)
+        octs.append('        0.0000000000        0.0000000000        0.0000000000        0.0000000000 >\n')
+        octs.append('        0.0000000000        0.0000000000\n')
+    return octs
 
 def get_screen(charges):
     """
-    Generate screening lines for a list of charge lines.
-    For each atom in charges, a screening line is produced with fixed screening parameters.
-    Screening terms are not "read" or generated. They are all the same.
-    
+    Generate screening lines like previous finctions.
     Parameters:
         charges (list of str): List of formatted charge lines.
         
@@ -326,6 +387,9 @@ def main(efp_g96, full_g96, topol_file):
         for atom_charge in temp_charges:
             MM_charge.append(atom_charge)
 
+    MM_dip = get_dipoles(MM_charge)              #DIPOLES, QUADRUPOLES, OCTUPOLES
+    MM_quad = get_quadrupoles(MM_charge)         #are all "empty." That is, filled
+    MM_oct = get_octupoles(MM_charge)            #with zeros.
     MM_screen2 = get_screen(MM_charge)
 
     # Write the output file with coordinates, charges, and screening information.
@@ -336,12 +400,30 @@ def main(efp_g96, full_g96, topol_file):
         outfile.write('  COORDINATES (BOHR)\n')
         for outline in MM_coords:
             outfile.write(outline)
-        outfile.write('STOP\n')
-        outfile.write('MONOPOLES\n')
+        outfile.write(' STOP\n')
+        outfile.write(' MONOPOLES\n')
         for outline in MM_charge:
             outfile.write(outline)
-        outfile.write('STOP\n')
-        outfile.write('SCREEN2      (FROM VDWSCL=   0.700)\n')
+        outfile.write(' STOP\n')
+        outfile.write(' DIPOLES\n')
+        for outline in MM_dip:
+            outfile.write(outline)
+        outfile.write(' STOP\n')
+        outfile.write(' QUADRUPOLES\n')
+        for outline in MM_quad:
+            outfile.write(outline)
+        outfile.write(' STOP\n')
+        outfile.write(' OCTUPOLES\n')
+        for outline in MM_oct:
+            outfile.write(outline)
+        outfile.write(' STOP\n')
+        outfile.write(' POLARIZABLE POINTS\n')
+        outfile.write('CT1            0.0000000000        0.0000000000        0.0000000000\n')
+        outfile.write('               0.0000000000        0.0000000000        0.0000000000        0.0000000000 >\n')
+        outfile.write('               0.0000000000        0.0000000000        0.0000000000        0.0000000000 >\n')
+        outfile.write('               0.0000000000\n')
+        outfile.write(' STOP\n')
+        outfile.write(' SCREEN2      (FROM VDWSCL=   0.700)\n')
         for outline in MM_screen2:
             outfile.write(outline)
         outfile.write('STOP\n')
@@ -350,3 +432,4 @@ def main(efp_g96, full_g96, topol_file):
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], sys.argv[3])
+    #efp_g96, full_g96, topol_file
