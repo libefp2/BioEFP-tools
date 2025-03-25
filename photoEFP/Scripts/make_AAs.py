@@ -7,7 +7,7 @@ Created on Sat Sep 28 15:13:19 2024
 This script creates .inp files for amino acids or molecules located in the EFP region.
 Non-amino acid molecules are treated with no virtual bonds (i.e. no broken bonds).
 
-Sample execution: python make_AAs_V2.py efp_pair53004.g96 confout_pair53004.g96 user_defined.txt topol.top
+Sample execution: python make_AAs.py efp_pair53004.g96 confout_pair53004.g96 user_defined.txt topol.top
     structure file with only EFP-region atoms and residues (.g96)
     full structure file will all atoms and residues (.g96)
     User-created text file with QM atoms and QM-MM covalent bond definitions (.txt)

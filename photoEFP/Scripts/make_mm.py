@@ -14,7 +14,10 @@ is then written to an output file ("prot.efp").
 import sys
 
 # Global dictionaries and lists
-
+known_amino_acids = [
+    'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE', 'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER',
+    'THR', 'TRP', 'TYR', 'VAL', 'HIP', 'HID', 'HIE', 'HISE', 'HISD', 'HISH','ACYS'
+]
 # 'SOL' returns the charge of oxygen in the water model (TIP3P). H charge is taken to be -1/2 * oxygen charge.
 # Change these for different water models.
 water_and_ions = {
@@ -75,17 +78,23 @@ def get_MM_coords(mm_indexes, g96_lines):
     temp_MMs = []
     prev_MM_flag = 0
     index = 0
-    prev_resid = None
+    prev_resid = g96_lines[0].split()[0]
     conversion = 18.897161646321  # nm -> Bohr
 
     for line in g96_lines:
         parts = line.split()
-        if len(parts) < 4 or line[0] != ' ':
+        
+        #if len(parts) < 4 or line[0] != ' ':
+        if len(parts) < 4:
             continue
-
+        if parts[1] not in known_amino_acids:
+            last_index=len(parts[1])
+            if parts[1][1:last_index]  not in known_amino_acids or parts[1][0]!='C':
+                temp_MMs=[]
         # If residue changes and a MM atom was processed, advance the index.
         if parts[0] != prev_resid and prev_MM_flag == 1:
             index += 1
+            #prev_MM_flag=0
 
         # Process lines with atom type "C" or "O"; we do not know yet if these are needed.
         if parts[2] in ('C', 'O'):
@@ -94,19 +103,13 @@ def get_MM_coords(mm_indexes, g96_lines):
             # Pad the label to length 7.
             col1 = col1.ljust(7)
             # Convert coordinates with the conversion factor.
-            '''
-            col2 = float(parts[4]) * conversion
-            col3 = float(parts[5]) * conversion
-            col4 = float(parts[6]) * conversion
-            temp_MMs.append(col1 + '%20.12f' % col2 + '%20.12f' % col3 + '%20.12f' % col4 + '\n')
-            '''
             x, y, z = [float(parts[i]) * conversion for i in range(4, 7)]
             col2 = f"{x:.12f}".rjust(17)
             col3 = f"{y:.12f}".rjust(18)
             col4 = f"{z:.12f}".rjust(18)
             col5 ='     0.00000001    0.000000005'
             temp_MMs.append(f"{col1}{col2}{col3}{col4}{col5}\n")
-
+            
         else:
             # For non-"C"/"O" lines, check if the residue matches the expected mm_indexes information.
             if parts[0] == mm_indexes[index][0] and parts[1] == mm_indexes[index][1]:
@@ -114,7 +117,7 @@ def get_MM_coords(mm_indexes, g96_lines):
                     # Append the last two entries from the temporary list, only the most recent "C" and "O"
                     MMs.append(temp_MMs[-2])
                     MMs.append(temp_MMs[-1])
-                    temp_MMs = []
+                    temp_MMs=[]
                 # Append current atom
                 col1 = parts[2][0] + parts[3]
                 col1 = col1.ljust(7)
@@ -131,7 +134,7 @@ def get_MM_coords(mm_indexes, g96_lines):
     return MMs
 
 
-def get_MM_charges(mm_indexes, topol_lines):
+def get_MM_charges(mm_coords, mm_resis, topol_lines):
     """
     Extract MM atom charges from the topology file.
     Charges for water ("SOL") and ions are assigned from the water_and_ions dictionary.
@@ -148,37 +151,38 @@ def get_MM_charges(mm_indexes, topol_lines):
     temp_MMs = []
     prev_MM_flag = 0
     index = 0
+    #num_water=0
     prev_resid = None
-
     for line in topol_lines:
+        curr_coord=mm_coords[index].split()[0]
+        l=len(curr_coord)
+        atom_ID=curr_coord[1:l]
         # When reaching the [ bonds ] section, finish processing by adding charges for remaining mm_indexes.
         if '[ bonds ]' in line:
-            # Determine atom id for subsequent water/ion entries.
-            atomid_str = MMs[-1].split()[0]
-            # Example: if atom label is "O12", extract "12"
-            atomid = int(atomid_str[1:])  
-            while index < len(mm_indexes):
-                # No need to "read" water charges. TIP3P is desired model.
-                if mm_indexes[index][1] == 'SOL':
-                    atomid += 1
-                    col1 = ('O' + str(atomid)).ljust(7)
+            for res in mm_resis:
+                if res[1]=='SOL':
+                    #print(res)
+                    
+                    col1=mm_coords[index].split()[0]
                     col2 = water_and_ions['SOL']
                     MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
-                    # For water, assign half the oxygen charge, changed to positive
-                    col2 = water_and_ions['SOL'] / (-2)
-                    atomid += 1
-                    col1 = ('H' + str(atomid)).ljust(7)
+                    index+=1
+                    
+                    col1=mm_coords[index].split()[0]
+                    col2 = water_and_ions['SOL']/(-2)
                     MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
-                    atomid += 1
-                    col1 = ('H' + str(atomid)).ljust(7)
+                    index+=1
+                    
+                    col1=mm_coords[index].split()[0]
                     MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
-                else:
-                    atomid += 1
-                    col1 = (mm_indexes[index][1][0] + str(atomid)).ljust(7)
-                    # Ion charge found by atom name
-                    col2 = water_and_ions[mm_indexes[index][1]]
+                    index+=1
+
+                elif res[1]=='CL':
+                    col1=mm_coords[index].split()[0]
+                    col2 = water_and_ions[res[1]]
                     MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
-                index += 1
+                    index+=1
+                    
             return MMs
 
         # Skip non-data lines.
@@ -186,33 +190,14 @@ def get_MM_charges(mm_indexes, topol_lines):
             continue
 
         parts = line.split()
-        # If residue changes and previous MM was processed, move to the next index.
-        if parts[2] != prev_resid and prev_MM_flag == 1:
-            index += 1
-            prev_MM_flag = 0
-
-        # Process lines with atom types "C" or "O"; not known yet which C and O needed.
-        if parts[1] in ('C', 'O'):
-            col1 = parts[1][0] + parts[0]
-            col1 = col1.ljust(7)
+        if(parts[0]==atom_ID):
+            #col1 = parts[4][0] + parts[0]
+            col1=curr_coord
+            #col1 = col1.ljust(7)
             col2 = float(parts[6])
-            temp_MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
-        else:
-            # Check if the current residue matches mm_indexes.
-            if parts[2] == mm_indexes[index][0] and parts[3] == mm_indexes[index][1]:
-                if len(temp_MMs) > 1:
-                    MMs.append(temp_MMs[-2])
-                    MMs.append(temp_MMs[-1])
-                    temp_MMs = []
-                col1 = parts[4][0] + parts[0]
-                col1 = col1.ljust(7)
-                col2 = float(parts[6])
-                MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
-                prev_MM_flag = 1
-            else:
-                prev_MM_flag = 0
-        prev_resid = parts[2]
-    return MMs
+            MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
+            index+=1
+
 
 
 def charges_from_spec_topol(topol_lines, last_atom):
@@ -370,7 +355,8 @@ def main(efp_g96, full_g96, topol_file):
 
     # Extract MM coordinates and charges.
     MM_coords = get_MM_coords(mm_residues, full_lines)
-    MM_charge = get_MM_charges(mm_residues, topol_lines)
+    print(len(MM_coords))
+    MM_charge = get_MM_charges(MM_coords, mm_residues, topol_lines)
 
     # For residues in separate_topol, obtain additional charges from their specific topology.
     for residue in separate_topol:
@@ -432,4 +418,5 @@ def main(efp_g96, full_g96, topol_file):
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], sys.argv[3])
+    #main('shell_bchl361-79002.g96','formed_bchl361-79002.g96','topol361.top')
     #efp_g96, full_g96, topol_file

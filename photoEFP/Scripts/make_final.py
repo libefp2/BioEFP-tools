@@ -5,11 +5,11 @@ Created on Wed Dec  4 12:33:41 2024
 @author: jackl
 
 Sample execution:
-    python make_final.py pair_83855.g96 efp_pair_83855.g96 user_defined.txt
+    python make_final.py efp_pair_83855.g96 pair_83855.g96 user_defined.txt
 
 This script reads in three files:
-  - A structure file in .g96 format (e.g. pair_83855.g96)
   - An EFP structure file (e.g. efp_pair_83855.g96)
+  - A structure file in .g96 format (e.g. pair_83855.g96)
   - A user_defined text file (user_defined.txt) with QM atoms and QM-MM boundary atoms
   
 It then builds an output file containing:
@@ -379,5 +379,5 @@ def main(g96_filename,efp_filename,qm_filename):
         f.write('$end')
 
 if __name__ == "__main__":
-    main(sys.argv[1],sys.argv[2],sys.argv[3])
-    #g96_file, efp_g96_file, user_defined.txt
+    main(sys.argv[2],sys.argv[1],sys.argv[3])
+    # efp_g96_file, g96_file, user_defined.txt
