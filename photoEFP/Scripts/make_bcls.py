@@ -13,7 +13,7 @@ head and tail groups are treated as separate fragments.
 
 This is a "hard-coded" script, that is, this script is very specific to chlorophylls 
 or bacteriochlorophylls (specifically chloropyll a and bacteriochlorophyll a). 
-If you intend to separate a molecule into multiplefragment .efp files, you will 
+If you intend to separate a molecule into multiple .efp files, you will 
 need to edit this script.
 """
 
@@ -29,6 +29,7 @@ import os
 g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
 full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
 
+
 RESNAME='BCL'                #Name of the residue that this script must parse into sub-fragments
 
 # Settings for fragment splitting. the bond between atoms C5 and C6 is where the fragments split.
@@ -36,8 +37,8 @@ tailside = 'CAA'             # Atom name defining the tail side boundary
 headside = 'C2A'             # Atom name defining the head side boundary
 
 # List of QM residue IDs. If you want all CLA/BCL residues to be made into fragments, make this empty
-site = ['361']  
-#site=''  
+#site = ['361']  
+site=''  
 oldres = 'nan'               # Initial residue number for tracking changes
 
 # ---------------------------
@@ -221,6 +222,8 @@ for line in full_lines:
             # If no head_cut has been found, update oldres and continue.
             if len(head_cut) < 3:
                 oldres = line.split()[0]
+                curr_head=[]
+                curr_tail=[]
                 continue
             # Once both a head and tail line have been recorded, compute virtual hydrogen positions.
             head_coord, tail_coord = cut_frag(head_cut, tail_cut)
