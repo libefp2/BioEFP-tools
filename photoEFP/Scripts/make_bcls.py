@@ -26,8 +26,10 @@ import os
 # ---------------------------
 # Command-line arguments:
 
-g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
-full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
+#g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
+#full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
+g96_file ='shell_bchl361-40000.g96'
+full_g96_file ='bchl361-40000.g96'
 
 
 RESNAME='BCL'                #Name of the residue that this script must parse into sub-fragments
@@ -37,9 +39,13 @@ tailside = 'CAA'             # Atom name defining the tail side boundary
 headside = 'C2A'             # Atom name defining the head side boundary
 
 # List of QM residue IDs. If you want all CLA/BCL residues to be made into fragments, make this empty
-#site = ['361']  
-site=''  
+site = ['361']  
+#site=''  
 oldres = 'nan'               # Initial residue number for tracking changes
+
+MAKE_QM_TAIL = 0             # True/false whether to make a tail fragment for the QM residue(s) only.
+                             # If you plan to include tail in QM region, make this 0
+                             # If you only want headring in QM region/need EFP tail, make this 1
 
 # ---------------------------
 # Global Dictionaries and Lists
@@ -172,7 +178,10 @@ def make_inp(fragment):
     # In case of only headring, a tail fragment must still be created, and
     # C6 is an MM atom covalently bound to C5, a QM atom.
     if fragment[0].split()[0] in site:
-        txt.append(" C6")
+        if(MAKE_QM_TAIL):
+            txt.append(" C6")
+        else:
+            return
     txt.append("\n")
     txt.append("!polarization points to remove:")
     if fragment[0].split()[0] in site:
@@ -216,15 +225,17 @@ head_cut = ''    # Temporary storage for the head atom used for virtual bond cre
 
 # Process each line in the full configuration file.
 for line in full_lines:
-    if RESNAME in line:
+    if(len(line)<50):
+        continue
+    #if RESNAME in line:
         # Process only for fragments with residue numbers in our list.
-        if oldres in frag_cla_resnums and (oldres != line.split()[0]):
-            # If no head_cut has been found, update oldres and continue.
-            if len(head_cut) < 3:
-                oldres = line.split()[0]
-                curr_head=[]
-                curr_tail=[]
-                continue
+    if oldres in frag_cla_resnums and (oldres != line.split()[0]):
+        # If no head_cut has been found, update oldres and continue.
+        if len(head_cut) < 3:
+            oldres = line.split()[0]
+            curr_head=[]
+            curr_tail=[]
+        else:
             # Once both a head and tail line have been recorded, compute virtual hydrogen positions.
             head_coord, tail_coord = cut_frag(head_cut, tail_cut)
             # Append the virtual hydrogen lines to the corresponding fragment lists.
@@ -233,13 +244,13 @@ for line in full_lines:
                 f"{head_coord[0]:.8f}".rjust(17) +
                 f"{head_coord[1]:.8f}".rjust(18) +
                 f"{head_coord[2]:.8f}".rjust(18) + "\n"
-            )
+                )
             curr_tail.append(
                 f" H000 1.0" +
                 f"{tail_coord[0]:.8f}".rjust(17) +
                 f"{tail_coord[1]:.8f}".rjust(18) +
                 f"{tail_coord[2]:.8f}".rjust(18) + "\n"
-            )
+                )
             # Reset head_cut for the next fragment.
             head_cut = ''
             # Depending on whether the residue is in the 'site' list, write both fragments or only the tail.
@@ -253,18 +264,18 @@ for line in full_lines:
             curr_tail = []
             #oldres = line.split()[0]
         
-        # Get the current atom name.
-        atomname = line.split()[2]
-        #oldres=line.split()[0]
-        # Append the line into the desired fragment based on the Rings list.
-        if line.split()[0] in frag_cla_resnums:
-            if atomname in Rings:
-                curr_head.append(line)
-            else:
-                curr_tail.append(line)
-            # Save the line for later use if it matches the headside or tailside.
-            if atomname == tailside:
-                tail_cut = line
-            elif atomname == headside:
-                head_cut = line
+    # Get the current atom name.
+    atomname = line.split()[2]
+    #oldres=line.split()[0]
+    # Append the line into the desired fragment based on the Rings list.
+    if line.split()[0] in frag_cla_resnums:
+        if atomname in Rings:
+            curr_head.append(line)
+        else:
+            curr_tail.append(line)
+        # Save the line for later use if it matches the headside or tailside.
+        if atomname == tailside:
+            tail_cut = line
+        elif atomname == headside:
+            head_cut = line
     oldres=line.split()[0]

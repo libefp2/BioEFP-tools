@@ -102,15 +102,19 @@ def build_efp_atom_lists():
         # Skip water and classical region files.
         if filename in ('water.efp', 'prot.efp'):
             continue
+        '''
         if filename.startswith(RESNAME):
+            #Logic to include CLAs or BCLs into final
+            
             continue
+        '''
         if filename.endswith('.efp'):
             # Remove the extension and extract the starting atom number.
             fragname = filename.split('.')[0]
             efp_atom_start = int(fragname.split('_')[2])
             key = str(efp_atom_start)
             efp_dict[key] = fragname
-            # For each fragment file, assume three atoms: starting number, +1 and +2.
+            # For each fragment file, assume three atoms: starting number, +1, and +2.
             efp_atoms.extend([str(efp_atom_start), str(efp_atom_start + 1), str(efp_atom_start + 2)])
     return efp_dict, efp_atoms
 
