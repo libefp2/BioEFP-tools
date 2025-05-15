@@ -4,7 +4,7 @@ Created on Wed Sep 18 12:28:23 2024
 
 @author: jackl
 
-Sample execution: python make_mm.py efp_pair53004.g96 confout_pair53004.g96 topol.top
+Sample execution: python make_mm.py shell_bchl361-79002.g96 bchl361-79002.g96 topol.top
 
 This script reads in EFP region file (.g96), a full structure file (.g96), and a topology file (.top or .itp)
 to extract MM (molecular mechanics) coordinates, charges, and screening parameters.The extracted information 
@@ -97,7 +97,7 @@ def get_MM_coords(mm_indexes, g96_lines):
             #prev_MM_flag=0
 
         # Process lines with atom type "C" or "O"; we do not know yet if these are needed.
-        if parts[2] in ('C', 'O'):
+        if parts[2] in ('C', 'O') and (parts[1] in known_amino_acids or 'C'+parts[1] in known_amino_acids):
             # Build a formatted atom label: first letter of atom type + atom ID (from field 3)
             col1 = parts[2][0] + parts[3]
             # Pad the label to length 7.
@@ -133,6 +133,21 @@ def get_MM_coords(mm_indexes, g96_lines):
         prev_resid = parts[0]
     return MMs
 
+def make_dict(resname):
+    start=0
+    out_charges=[]
+    with open('amber03.ff/'+resname+'.itp','r') as itp:
+        itp_lines=itp.readlines()
+    for line in itp_lines:
+        if '[ bonds ]' in line:
+            return out_charges
+        elif(start==1) and line[0]==' ':
+            out_charges.append(float(line.split()[6]))
+            #out_dict[line.split()[0]]=line.split()[6]
+        elif '[ atoms ]' in line:
+            start=1
+    #return out_charges
+            
 
 def get_MM_charges(mm_coords, mm_resis, topol_lines):
     """
@@ -153,6 +168,11 @@ def get_MM_charges(mm_coords, mm_resis, topol_lines):
     index = 0
     #num_water=0
     prev_resid = None
+    '''
+    for line in mm_coords:
+        print(line)
+        #exit()
+    '''
     for line in topol_lines:
         curr_coord=mm_coords[index].split()[0]
         l=len(curr_coord)
@@ -160,28 +180,38 @@ def get_MM_charges(mm_coords, mm_resis, topol_lines):
         # When reaching the [ bonds ] section, finish processing by adding charges for remaining mm_indexes.
         if '[ bonds ]' in line:
             for res in mm_resis:
-                if res[1]=='SOL':
+                if res[1] in known_cofactors:
+                    res_charges=make_dict(res[1])
+                    #print(res[1],len(res_charges))
+                    for charge in res_charges:
+                        col1=(mm_coords[index].split()[0]).ljust(8)
+                        col2 = charge
+                        MMs.append(col1 + '%16.10f' % col2 + '        0.0000000000\n')
+                        index+=1
+                elif res[1]=='SOL':
                     #print(res)
                     
-                    col1=mm_coords[index].split()[0]
+                    col1=(mm_coords[index].split()[0]).ljust(8)
                     col2 = water_and_ions['SOL']
-                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
+                    MMs.append(col1 + '%16.10f' % col2 + '        0.0000000000\n')
                     index+=1
                     
-                    col1=mm_coords[index].split()[0]
+                    col1=(mm_coords[index].split()[0]).ljust(8)
                     col2 = water_and_ions['SOL']/(-2)
-                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
+                    MMs.append(col1 + '%16.10f' % col2 + '        0.0000000000\n')
                     index+=1
                     
-                    col1=mm_coords[index].split()[0]
-                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
+                    col1=(mm_coords[index].split()[0]).ljust(8)
+                    MMs.append(col1 + '%16.10f' % col2 + '        0.0000000000\n')
                     index+=1
 
-                elif res[1]=='CL':
-                    col1=mm_coords[index].split()[0]
+                elif res[1]=='CL' or res[1]=='NA':
+                    #print((mm_coords[index].split()[0]).ljust(8))
+                    col1=(mm_coords[index].split()[0]).ljust(8)
                     col2 = water_and_ions[res[1]]
-                    MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
+                    MMs.append(col1 + '%16.10f' % col2 + '        0.0000000000\n')
                     index+=1
+
                     
             return MMs
 
@@ -192,12 +222,12 @@ def get_MM_charges(mm_coords, mm_resis, topol_lines):
         parts = line.split()
         if(parts[0]==atom_ID):
             #col1 = parts[4][0] + parts[0]
-            col1=curr_coord
+            col1=curr_coord.ljust(8)
             #col1 = col1.ljust(7)
             col2 = float(parts[6])
-            MMs.append(col1 + '%20.10f' % col2 + '        0.0000000000\n')
+            MMs.append(col1 + '%16.10f' % col2 + '        0.0000000000\n')
             index+=1
-
+    
 
 
 def charges_from_spec_topol(topol_lines, last_atom):
@@ -346,18 +376,23 @@ def main(efp_g96, full_g96, topol_file):
             continue
         # If residue name is not in known cofactors, add to MM residues.
         # known_cofactors are residues that have separate topology and will not be found 
-        #     in the standard topology file. This script expeects to find an .itp file
+        #     in the standard topology file. This script expects to find an .itp file
         #     for every known_cofactor that will be used instead of the master topology.
         elif res[1] not in known_cofactors:
             mm_residues.append(res)
         else:
             separate_topol.append(res)
+            #print(res)
+            #errorfinder
+            mm_residues.append(res)
 
     # Extract MM coordinates and charges.
     MM_coords = get_MM_coords(mm_residues, full_lines)
-    print(len(MM_coords))
+    #print(len(MM_coords))
+    #print(mm_residues)
     MM_charge = get_MM_charges(MM_coords, mm_residues, topol_lines)
 
+    '''
     # For residues in separate_topol, obtain additional charges from their specific topology.
     for residue in separate_topol:
         # Use the last atom from MM_charge to set the numbering
@@ -372,9 +407,9 @@ def main(efp_g96, full_g96, topol_file):
         temp_charges = charges_from_spec_topol(spec_topol_lines, last_ID)
         for atom_charge in temp_charges:
             MM_charge.append(atom_charge)
-
+    '''
     MM_dip = get_dipoles(MM_charge)              #DIPOLES, QUADRUPOLES, OCTUPOLES
-    MM_quad = get_quadrupoles(MM_charge)         #are all "empty." That is, filled
+    MM_quad = get_quadrupoles(MM_charge)         #are all "empty." As in filled
     MM_oct = get_octupoles(MM_charge)            #with zeros.
     MM_screen2 = get_screen(MM_charge)
 
@@ -417,6 +452,7 @@ def main(efp_g96, full_g96, topol_file):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    #main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main('efp_opt_83855.g96','optimized_83855.g96','edit_topol.itp')
     #main('shell_bchl361-79002.g96','formed_bchl361-79002.g96','topol361.top')
     #efp_g96, full_g96, topol_file

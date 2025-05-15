@@ -5,7 +5,7 @@ Created on Tue Jul 16 14:42:41 2024
 @author: jackl
 
 
-Sample execution: python make_bcls_V2.py efp_opt_83855.g96 optimized_83855.g96
+Sample execution: python make_bcls.py shell_bchl361-79002.g96 bchl361-79002.g96
 
 This script reads in a .g96 file of the EFP region and a full configuration .g96 file,
 and then creates .inp files for bacteriochlorophyll a molecules. In this process, the
@@ -26,10 +26,8 @@ import os
 # ---------------------------
 # Command-line arguments:
 
-#g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
-#full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
-g96_file ='shell_bchl361-40000.g96'
-full_g96_file ='bchl361-40000.g96'
+g96_file = sys.argv[1]       # EFP region file (e.g., "efp_opt_83855.g96")
+full_g96_file = sys.argv[2]  # Full configuration file (e.g., "optimized_83855.g96")
 
 
 RESNAME='BCL'                #Name of the residue that this script must parse into sub-fragments
