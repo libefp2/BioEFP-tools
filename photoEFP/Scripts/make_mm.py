@@ -452,7 +452,5 @@ def main(efp_g96, full_g96, topol_file):
 
 
 if __name__ == "__main__":
-    #main(sys.argv[1], sys.argv[2], sys.argv[3])
-    main('efp_opt_83855.g96','optimized_83855.g96','edit_topol.itp')
-    #main('shell_bchl361-79002.g96','formed_bchl361-79002.g96','topol361.top')
+    main(sys.argv[1], sys.argv[2], sys.argv[3])
     #efp_g96, full_g96, topol_file
