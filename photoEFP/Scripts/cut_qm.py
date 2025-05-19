@@ -178,7 +178,7 @@ def get_monopoles(lines, coords):
         if 'MONOPOLES' in line:
             start = 1
 
-def get_dipoles(lines, cut_coords):
+def get_dipoles(lines, coords):
     """
     Extract the dipoles section lines that should be removed.
     
@@ -187,24 +187,22 @@ def get_dipoles(lines, cut_coords):
         cut_coords (list of str): Coordinate lines of atoms to remove.
     
     Returns:
-        dipoles (list of str): Lines from the DIPOLES section not matching the kept atoms.
+        dipoles (list of str): Lines from the DIPOLES section matching the kept atoms.
     """
     dipoles = []
-    cut_names = [atom.split()[0] for atom in cut_coords]
+    keep_names = [atom.split()[0] for atom in coords]
     start = 0
     for line in lines:
         if start == 1:
             if 'STOP' in line:
                 return dipoles
-            # Skip lines if the atom name is in the list of coordinates to cut.
-            if line.split()[0] in cut_names:
-                continue
-            else:
+            # append lines if the atom name is in the list of coordinates.
+            if line.split()[0] in keep_names:
                 dipoles.append(line)
         if 'DIPOLES' in line:
             start = 1
 
-def get_quadrupoles(lines, cut_coords):
+def get_quadrupoles(lines, coords):
     """
     Extract the quadrupoles section lines.
     
@@ -219,7 +217,7 @@ def get_quadrupoles(lines, cut_coords):
         quadrupoles (list of str): Lines from the QUADRUPOLES section.
     """
     quadrupoles = []
-    cut_names = [atom.split()[0] for atom in cut_coords]
+    keep_names = [atom.split()[0] for atom in coords]
     start = 0
     k = 0  # Counter to skip one line after a match
     j = 0  # Counter to include one line after a non-match
@@ -233,7 +231,7 @@ def get_quadrupoles(lines, cut_coords):
                 quadrupoles.append(line)
                 j -= 1
             # When encountering a cut name, set k to skip the next line; do not append.
-            elif line.split()[0] in cut_names:
+            elif line.split()[0] not in keep_names:
                 k = 1
             else:
                 quadrupoles.append(line)
@@ -241,7 +239,7 @@ def get_quadrupoles(lines, cut_coords):
         if 'QUADRUPOLES' in line:
             start = 1
 
-def get_octupoles(lines, cut_coords):
+def get_octupoles(lines, coords):
     """
     Extract the octupoles section lines.
     
@@ -256,7 +254,7 @@ def get_octupoles(lines, cut_coords):
         octupoles (list of str): Lines from the OCTUPOLES section.
     """
     octupoles = []
-    cut_names = [atom.split()[0] for atom in cut_coords]
+    keep_names = [atom.split()[0] for atom in coords]
     start = 0
     j = 0
     k = 0
@@ -269,7 +267,7 @@ def get_octupoles(lines, cut_coords):
             elif j > 0:
                 octupoles.append(line)
                 j -= 1
-            elif line.split()[0] in cut_names:
+            elif line.split()[0] not in keep_names:
                 k = 2
             else:
                 octupoles.append(line)
@@ -397,10 +395,10 @@ def main(inp, efp):
     
     # Extract sections for monopoles, dipoles, quadrupoles, octupoles, and polarizable points.
     keep_monop = get_monopoles(efp_lines, keep_coords)
-    keep_dip = get_dipoles(efp_lines, rem_coords)
-    keep_quadrup = get_quadrupoles(efp_lines, rem_coords)
-    keep_octup = get_octupoles(efp_lines, rem_coords)
-    keep_pols = get_polarpts(efp_lines, rem_coords)
+    keep_dip = get_dipoles(efp_lines, keep_coords)
+    keep_quadrup = get_quadrupoles(efp_lines, keep_coords)
+    keep_octup = get_octupoles(efp_lines, keep_coords)
+    keep_pols = get_polarpts(efp_lines, keep_coords)
     
     # Extract screening parameters from two different screen sections.
     keep_screen = get_screen(efp_lines, keep_coords, 'SCREEN ')

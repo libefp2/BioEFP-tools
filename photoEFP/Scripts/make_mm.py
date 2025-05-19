@@ -407,12 +407,16 @@ def main(efp_g96, full_g96, topol_file):
         temp_charges = charges_from_spec_topol(spec_topol_lines, last_ID)
         for atom_charge in temp_charges:
             MM_charge.append(atom_charge)
-    '''
+    
+    The functions below were made to create "dummy" values that are not required for Qchem
+        -But are required for GAMESS EFP input (?)
+    
     MM_dip = get_dipoles(MM_charge)              #DIPOLES, QUADRUPOLES, OCTUPOLES
     MM_quad = get_quadrupoles(MM_charge)         #are all "empty." As in filled
     MM_oct = get_octupoles(MM_charge)            #with zeros.
+    '''
     MM_screen2 = get_screen(MM_charge)
-
+    
     # Write the output file with coordinates, charges, and screening information.
     # Headings and sections are written explicitly here.
     with open('prot.efp', 'w') as outfile:
@@ -423,9 +427,11 @@ def main(efp_g96, full_g96, topol_file):
             outfile.write(outline)
         outfile.write(' STOP\n')
         outfile.write(' MONOPOLES\n')
+        
         for outline in MM_charge:
             outfile.write(outline)
         outfile.write(' STOP\n')
+        '''
         outfile.write(' DIPOLES\n')
         for outline in MM_dip:
             outfile.write(outline)
@@ -444,6 +450,7 @@ def main(efp_g96, full_g96, topol_file):
         outfile.write('               0.0000000000        0.0000000000        0.0000000000        0.0000000000 >\n')
         outfile.write('               0.0000000000\n')
         outfile.write(' STOP\n')
+        '''
         outfile.write(' SCREEN2      (FROM VDWSCL=   0.700)\n')
         for outline in MM_screen2:
             outfile.write(outline)
@@ -453,4 +460,6 @@ def main(efp_g96, full_g96, topol_file):
 
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2], sys.argv[3])
+    #main('efp_opt_83855.g96','optimized_83855.g96','edit_topol.itp')
+    #main('shell_bchl361-79002.g96','formed_bchl361-79002.g96','topol361.top')
     #efp_g96, full_g96, topol_file
