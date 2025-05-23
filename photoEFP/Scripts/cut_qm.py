@@ -19,6 +19,22 @@ should be removed.
 import sys
 import numpy as np
 
+def extract_atomnums_B(line):
+    """
+    Given a line starting with 'B', extract two atom numbers based on the length
+    of the first token.
+    """
+    token = line.split()[0]
+    if len(token) == 4:
+        return int(token[2]), int(token[3])
+    elif len(token) == 5:
+        return int(token[2:4]), int(token[4])
+    elif len(token) == 6:
+        return int(token[2:4]), int(token[4:6])
+    else:
+        return None, None
+         
+
 def distance(x1, y1, z1, x2, y2, z2):
     dist = np.sqrt((float(x1) - float(x2))**2 +
                    (float(y1) - float(y2))**2 +
@@ -98,22 +114,6 @@ def get_coords(lines, atoms, pols):
     start = False
     coords = []
     rem_coords = []
-    
-    # Helper function to extract two atom numbers from bond midpoints, bond identifier starts with 'B'
-    def extract_atomnums_B(line):
-        """
-        Given a line starting with 'B', extract two atom numbers based on the length
-        of the first token.
-        """
-        token = line.split()[0]
-        if len(token) == 4:
-            return int(token[2]), int(token[3])
-        elif len(token) == 5:
-            return int(token[2:4]), int(token[4])
-        elif len(token) == 6:
-            return int(token[2:4]), int(token[4:6])
-        else:
-            return None, None
 
     # Process each line in the file.
     for line in lines:
@@ -132,9 +132,9 @@ def get_coords(lines, atoms, pols):
             atomnum = int(line[1:3])
             if atomnum in atoms:
                 rem_coords.append(line)
-            elif atomnum in pols:
-                coords.append(line)
-                rem_coords.append(line)
+            #elif atomnum in pols:
+            #    coords.append(line)
+            #    rem_coords.append(line)
             else:
                 coords.append(line)
 
@@ -147,7 +147,7 @@ def get_coords(lines, atoms, pols):
             if atomnum in atoms or atomnum2 in atoms:
                 rem_coords.append(line)
             # If either atom number is in the polarizable removal list, add to both lists.
-            elif atomnum in pols or atomnum2 in pols:
+            elif atomnum in pols and atomnum2 in pols:
                 coords.append(line)
                 rem_coords.append(line)
             else:
@@ -155,7 +155,7 @@ def get_coords(lines, atoms, pols):
 
     return coords, rem_coords
 
-def get_monopoles(lines, coords):
+def get_monopoles(lines, coords, rem_coords):
     """
     Extract the monopole section for the atoms given coordinates.
     
@@ -168,16 +168,88 @@ def get_monopoles(lines, coords):
     """
     monopoles = []
     keep_names = [atom.split()[0] for atom in coords]
+    charge_acceptors=[]
+    virt_h=[]
+    rem_non_h=[]
+    chargematch=[]
+    for atom in rem_coords:
+        if 'H000' in atom:
+            virt_h.append(atom.split()[0])
+        elif atom[0]=='B':
+            atom1, atom2=extract_atomnums_B(atom)
+            search=1
+            for num in virt_h:
+                if atom1 == int(num[1:3]):
+                    # name of atoms to move charge FROM x2, number of atom to move charge TO, charge starts at 0.
+                    stratom=str(atom2)
+                    search=0
+                    if atom1 not in rem_non_h:
+                        if(len(stratom)==1):
+                            stratom='0'+stratom
+                        chargematch.append([atom.split()[0],num,stratom,0.0])
+                        search=0
+                elif atom2 == int(num[1:3]):
+                    stratom=str(atom2)
+                    search=0
+                    if atom2 not in rem_non_h:
+                        if(len(stratom)==1):
+                            stratom='0'+stratom
+                        chargematch.append([atom.split()[0],num,stratom,0.0])
+                        #chargematch.append[str(atom2),num,0.0]
+                        search=0
+            if atom1 not in rem_non_h and search==1:
+                stratom=str(atom1)
+                if(len(stratom)==1):
+                    stratom='0'+stratom
+                charge_acceptors.append(stratom)
+            elif atom2 not in rem_non_h and search==1:
+                stratom=str(atom2)
+                if(len(stratom)==1):
+                    stratom='0'+stratom
+                charge_acceptors.append(stratom)
+        else:
+            rem_non_h.append(int(atom.split()[0][1:3]))
+    charge_rem=0.0
     start = 0
     for line in lines:
         if start == 1:
             if 'STOP' in line:
-                return monopoles
+                break
+                #return monopoles
             if line.split()[0] in keep_names:
                 monopoles.append(line)
+            else:
+                charge_rem+=float(line.split()[1])
+                charge_rem+=float(line.split()[2])
+            for H in chargematch:
+                if line.split()[0] in H:
+                    H[-1]+=float(line.split()[1])+float(line.split()[2])
+                    charge_rem-=(float(line.split()[1])+float(line.split()[2]))
+                    
         if 'MONOPOLES' in line:
             start = 1
+    i=-1
+    for charge in monopoles:
+        i+=1
+        if charge[0]=='B':
+            break
+        atomnum=charge[1:3]
+        for H in chargematch:
+            if atomnum==H[2]:
+                oldcharge=float(charge.split()[1])
+                realcharge=oldcharge+H[-1]
+                oldcharge=f"{oldcharge:.10f}".rjust(14)
+                newcharge=f"{realcharge:.10f}".rjust(14)
+                monopoles[i]=monopoles[i].replace(oldcharge,newcharge)
+        if atomnum in charge_acceptors:
+            oldcharge=float(charge.split()[1])
+            realcharge=oldcharge+(charge_rem/len(charge_acceptors))
+            oldcharge=f"{oldcharge:.10f}".rjust(14)
+            newcharge=f"{realcharge:.10f}".rjust(14)
+            monopoles[i]=monopoles[i].replace(oldcharge,newcharge)
+    return monopoles
 
+            
 def get_dipoles(lines, coords):
     """
     Extract the dipoles section lines that should be removed.
@@ -290,6 +362,20 @@ def get_polarpts(lines, cut_coords):
     Returns:
         polars (list of str): Lines from the POLARIZABLE POINTS section that pass the filter.
     """
+    Hs=[]
+    #non_H=[]
+    for line in cut_coords:
+        if 'H000' in line:
+            Hs.append(line)
+        elif line[0]=='B':
+            atom1, atom2 = extract_atomnums_B(line)
+            for hydr in Hs:
+                H_atom=int(hydr[1:3])
+                if atom1==H_atom or atom2==H_atom:
+                    Hs.append(line)
+                    break
+        
+            
     polars = []
     #remove_names = [atom.split()[0] for atom in cut_coords]
     start = 0
@@ -308,12 +394,17 @@ def get_polarpts(lines, cut_coords):
                     # Calculate the distance between the polarizable point and an atom in cut_coords.
                     current_dist = distance(line.split()[1], line.split()[2], line.split()[3],
                                             atom.split()[1], atom.split()[2], atom.split()[3])
+                    if atom in Hs:
+                        cutoff=1.701
+                    else:
+                        cutoff=3.700
                     if current_dist < mindist:
                         mindist = current_dist
-                # If the minimum distance is greater than 3, keep this polarizable point.
-                if mindist > 3:
-                    polars.append(line)
-                    j = 3  # Use a counter to skip the next 3 lines.
+                # If the minimum distance is greater than ~0.9A, keep this polarizable point (number in Bohrs).
+                    if mindist < cutoff:
+                        #polars.append(line)
+                        j = 0  # Use a counter to skip the next lines until new POL PT is found.
+                        break
         if 'POLARIZABLE POINTS' in line:
             start = 1
 
@@ -394,11 +485,11 @@ def main(inp, efp):
     keep_coords, rem_coords = get_coords(efp_lines, rem_atoms, rem_pols)
     
     # Extract sections for monopoles, dipoles, quadrupoles, octupoles, and polarizable points.
-    keep_monop = get_monopoles(efp_lines, keep_coords)
+    keep_monop = get_monopoles(efp_lines, keep_coords, rem_coords)
     keep_dip = get_dipoles(efp_lines, keep_coords)
     keep_quadrup = get_quadrupoles(efp_lines, keep_coords)
     keep_octup = get_octupoles(efp_lines, keep_coords)
-    keep_pols = get_polarpts(efp_lines, keep_coords)
+    keep_pols = get_polarpts(efp_lines, rem_coords)
     
     # Extract screening parameters from two different screen sections.
     keep_screen = get_screen(efp_lines, keep_coords, 'SCREEN ')
