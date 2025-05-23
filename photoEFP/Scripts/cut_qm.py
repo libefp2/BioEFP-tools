@@ -183,7 +183,7 @@ def get_monopoles(lines, coords, rem_coords):
                     # name of atoms to move charge FROM x2, number of atom to move charge TO, charge starts at 0.
                     stratom=str(atom2)
                     search=0
-                    if atom1 not in rem_non_h:
+                    if atom2 not in rem_non_h:
                         if(len(stratom)==1):
                             stratom='0'+stratom
                         chargematch.append([atom.split()[0],num,stratom,0.0])
@@ -191,7 +191,7 @@ def get_monopoles(lines, coords, rem_coords):
                 elif atom2 == int(num[1:3]):
                     stratom=str(atom2)
                     search=0
-                    if atom2 not in rem_non_h:
+                    if atom1 not in rem_non_h:
                         if(len(stratom)==1):
                             stratom='0'+stratom
                         chargematch.append([atom.split()[0],num,stratom,0.0])
