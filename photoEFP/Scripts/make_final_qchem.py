@@ -94,10 +94,12 @@ def build_efp_atom_lists():
       - A list of atom numbers (as strings) for EFP atoms. For each found file, we add the starting atom
         and the two subsequent atom numbers.
     Returns:
-        (efp_dict, efp_atoms)
+        (efp_dict, efp_atoms, efp_nums)
     """
-    efp_atoms = []
+    efp_atoms = {}
     efp_dict = {}
+    efp_nums={}
+    start_list=[]
     for filename in os.listdir('./'):
         # Skip water and classical region files.
         if filename in ('water.efp', 'prot.efp'):
@@ -113,10 +115,23 @@ def build_efp_atom_lists():
             fragname = filename.split('.')[0]
             efp_atom_start = int(fragname.split('_')[2])
             key = str(efp_atom_start)
+            start_list.append(key)
             efp_dict[key] = fragname
+            names=[]
+            nums=[]
+            with open(filename,'r') as fragment:
+                for line in fragment.readlines():
+                    if(line[0]=='A'):
+                        atomnum=int(line[1:3])
+                        nums.append(atomnum+efp_atom_start-1)
+                        names.append(line.split()[0])
+                    if(len(names)==3):
+                        efp_atoms[key]=names
+                        efp_nums[key]=nums
+                        break
             # For each fragment file, assume three atoms: starting number, +1, and +2.
-            efp_atoms.extend([str(efp_atom_start), str(efp_atom_start + 1), str(efp_atom_start + 2)])
-    return efp_dict, efp_atoms
+            #efp_atoms.extend([str(efp_atom_start), str(efp_atom_start + 1), str(efp_atom_start + 2)])
+    return efp_dict, efp_atoms, efp_nums
 
 def cut_frag(head, tail):
     """    
@@ -238,7 +253,7 @@ def get_qm_lines(user_lines,g96):
     outlines.append(' $efp_fragments\n')
     return outlines
 
-def process_structure_coords(g96_lines, efp_atoms, efp_dict):
+def process_structure_coords(g96_lines, efp_atoms, efp_dict, efp_nums):
     """
     Process the structure (.g96) file lines to add EFP fragment coordinates.
     
@@ -246,45 +261,55 @@ def process_structure_coords(g96_lines, efp_atoms, efp_dict):
     
     Parameters:
         g96_lines (list of str): Lines from the structure file.
-        efp_atoms (list of str): List of EFP atom numbers (as strings) from the EFP files.
-        efp_dict (dict): Mapping from starting atom number (as string) to fragment name.
+        efp_atoms (dict): Mapping from filename atom ID (string) to the .efp file atomnames.
+        efp_dict (dict): Mapping from filename atom ID (string) to fragment full name.
+        efp_nums (dict): Mapping from filename atom ID (string) to .g96 IDs for the 3 reference atoms.
     
     Returns:
         A list of formatted EFP coordinates.
     """
     outlines = []
     start = False
-    atomcounter = 3  # Initialize counter (used to control how many atoms to output)
+    search= False
+    #atomcounter = 3  # Initialize counter (used to control how many atoms to output)
     for line in g96_lines:
         if start:
+            # Search until "END"
             if 'END' in line:
                 break
-            # For the first few atoms (if atomcounter < 3) add coordinate lines.
-            elif atomcounter < 3:
-                atomcounter += 1
-                col1 = ('A0' + str(atomcounter) + line.split()[2]).ljust(8)
-                x, y, z = [float(line.split()[i]) * 10 for i in range(4, 7)]
-                col2 = f"{x:.8f}".rjust(13)
-                col3 = f"{y:.8f}".rjust(13)
-                col4 = f"{z:.8f}".rjust(13)
-                outlines.append(f"{col1}{col2}{col3}{col4}\n")
-            # If the fourth token of the line (index 3) is one of the EFP atoms...
-            elif line.split()[3] in efp_atoms:
-                # Retrieve the corresponding fragment name.
-                frag_name = efp_dict[line.split()[3]]
-                outlines.append(frag_name + '\n')
-                col1 = ('A01' + line.split()[2]).ljust(8)
-                x, y, z = [float(line.split()[i]) * 10 for i in range(4, 7)]
-                col2 = f"{x:.8f}".rjust(13)
-                col3 = f"{y:.8f}".rjust(13)
-                col4 = f"{z:.8f}".rjust(13)
-                outlines.append(f"{col1}{col2}{col3}{col4}\n")
-                atomcounter = 1
+            #If current atom index is found in fragment file atom, get fragment name, atomname, atom IDs
+            #    -note, generally, the first atom ID will match file name, HOWEVER, in cases where cut_qm.py 
+            #     has removed the first atom, this will be offset
+            elif line.split()[3] in efp_dict:
+                #print(line)
+                fragname=efp_dict[line.split()[3]]
+                atomnames=efp_atoms[line.split()[3]]
+                atomIDs=efp_nums[line.split()[3]]
+                outlines.append(fragname + '\n')
+                #print(atomIDs[0],line.split()[3])
+                j=0
+                search=True
+            # Fragment indicator is found, now find specific atoms and coordinates
+            if search:
+                if int(line.split()[3]) == atomIDs[j]:
+                    col1 = (atomnames[j]).ljust(8)
+                    x, y, z = [float(line.split()[i]) * 10 for i in range(4, 7)]
+                    col2 = f"{x:.8f}".rjust(13)
+                    col3 = f"{y:.8f}".rjust(13)
+                    col4 = f"{z:.8f}".rjust(13)
+                    outlines.append(f"{col1}{col2}{col3}{col4}\n")
+                    j+=1
+                    if(j==3):
+                        search = False
         if 'POSITION' in line:
             start = True
     return outlines
 
-def process_water_coords(efp_lines):
+def water_dist(x,y,z,x2,y2,z2):
+    dist=np.sqrt((x-x2)**2+(y-y2)**2+(z-z2)**2)
+    return dist
+
+def process_water_coords(efp_lines,user_lines):
     """
     Process water coordinates from the EFP structure file.
     
@@ -298,22 +323,36 @@ def process_water_coords(efp_lines):
     Returns:
         A list of formatted water coordinate lines.
     """
+    qm_sol=[]
+    for line in user_lines:
+        parts=line.split()
+        if 'QM-MM' in line:
+            break
+        elif(len(parts)>6):
+            if line.split()[1]=='SOL' and line.split()[2]=='OW':
+                qm_sol.append([float(parts[4]),float(parts[5]),float(parts[6])])
     outlines = []
     found_water = 0
     for line in efp_lines:
         if(len(line.split())<2):
             continue
-        #if 'SOL   OW' in line:
-        elif(line.split()[1]=='SOL' and line.split()[2]=='OW'):
-            found_water = 2
-            #Every water EFP fragment is called "water"; residue numbers are lost
-            outlines.append('water\n')
-            col1 = 'A01O1'.ljust(8)
-            x, y, z = [float(line.split()[i]) * 10 for i in range(4, 7)]
-            col2 = f"{x:.8f}".rjust(13)
-            col3 = f"{y:.8f}".rjust(13)
-            col4 = f"{z:.8f}".rjust(13)
-            outlines.append(f"{col1}{col2}{col3}{col4}\n")
+        #if 'SOL   OW' in line, and atom ID is not a QM atom:
+        elif(line.split()[1]=='SOL' and line.split()[2]=='OW') and line.split()[3]:
+            nearest_dist=100.0
+            for atom in qm_sol:
+                dist=water_dist(atom[0],atom[1],atom[2],float(line.split()[4]),float(line.split()[5]),float(line.split()[6]))
+                if(nearest_dist>dist):
+                    nearest_dist=dist
+            if(nearest_dist>0.001):
+                found_water = 2
+                #Every water EFP fragment is called "water"; residue numbers are lost
+                outlines.append('water\n')
+                col1 = 'A01O1'.ljust(8)
+                x, y, z = [float(line.split()[i]) * 10 for i in range(4, 7)]
+                col2 = f"{x:.8f}".rjust(13)
+                col3 = f"{y:.8f}".rjust(13)
+                col4 = f"{z:.8f}".rjust(13)
+                outlines.append(f"{col1}{col2}{col3}{col4}\n")
         elif found_water > 0:
             # For subsequent lines, assign hydrogen labels.
             col1 = ('A0'+str(4-found_water)+'H' + str(3 - found_water)).ljust(8)
@@ -363,7 +402,7 @@ def main(g96_filename,efp_filename,qm_filename):
     g96_lines, efp_lines, qm_lines = read_files(g96_filename, efp_filename, qm_filename)
     
     # Build the list/dictionary of EFP atom numbers from all .efp files in the current directory.
-    efp_dict, efp_atoms = build_efp_atom_lists()
+    efp_dict, efp_atoms, efp_nums, start_list = build_efp_atom_lists()
 
     # Build the output list by starting with the header.
     header_lines = build_header('1')
@@ -376,11 +415,11 @@ def main(g96_filename,efp_filename,qm_filename):
     outlines.extend(qm_outlines)
     
     # Process structure coordinates from the g96 file.
-    g96_coords = process_structure_coords(g96_lines, efp_atoms, efp_dict)
+    g96_coords = process_structure_coords(g96_lines, efp_atoms, efp_dict, efp_nums)
     outlines.extend(g96_coords)
     
     # Process water molecule coordinates from the structure file.
-    water_coords = process_water_coords(efp_lines)
+    water_coords = process_water_coords(efp_lines,qm_lines)
     outlines.extend(water_coords)
     
     # Process classical fragment file 'prot.efp' and append converted coordinate lines.

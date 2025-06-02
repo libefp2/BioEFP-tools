@@ -374,14 +374,12 @@ def get_polarpts(lines, cut_coords):
                 if atom1==H_atom or atom2==H_atom:
                     Hs.append(line)
                     break
-        
             
     polars = []
     #remove_names = [atom.split()[0] for atom in cut_coords]
     start = 0
     j = 0
     for line in lines:
-        mindist = 20.0  # Initialize minimum distance with a high value.
         if start == 1:
             if 'STOP' in line:
                 return polars
@@ -390,21 +388,21 @@ def get_polarpts(lines, cut_coords):
                 j -= 1
             # Check lines starting with "CT" (assumed polarizable point lines)
             elif line[0:2] == 'CT':
+                j=3
                 for atom in cut_coords:
+                    #j=3
                     # Calculate the distance between the polarizable point and an atom in cut_coords.
                     current_dist = distance(line.split()[1], line.split()[2], line.split()[3],
                                             atom.split()[1], atom.split()[2], atom.split()[3])
                     if atom in Hs:
                         cutoff=1.701
                     else:
-                        cutoff=3.700
-                    if current_dist < mindist:
-                        mindist = current_dist
-                # If the minimum distance is greater than ~0.9A, keep this polarizable point (number in Bohrs).
-                    if mindist < cutoff:
-                        #polars.append(line)
-                        j = 0  # Use a counter to skip the next lines until new POL PT is found.
+                        cutoff=3.00
+                    if current_dist < cutoff:
+                        j = 0
                         break
+                if(j!=0):
+                    polars.append(line)                
         if 'POLARIZABLE POINTS' in line:
             start = 1
 
@@ -536,3 +534,4 @@ if __name__ == "__main__":
     # Execute the main function using command-line arguments.
     # Example execution: python cut_qm.py ala_33_473.inp a0001.efp
     main(sys.argv[1], sys.argv[2])
+    

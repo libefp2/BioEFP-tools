@@ -32,6 +32,7 @@ full_g96 = sys.argv[2]    # Full configuration file ("confout_pair53004.g96")
 settings_file = sys.argv[3]   # User settings file
 topol_file = sys.argv[4]      # Topology file ("topol.top")
 
+
 # Read the EFP file lines
 with open(efp_g96, 'r') as f:
     efp_lines = f.readlines()
@@ -43,6 +44,8 @@ with open(full_g96, 'r') as f:
 # ---------------------------
 # Global Data and Parameters
 # ---------------------------
+# Residue names found in the (efp).g96, but should not be considered for EFP calculation. ie linking atoms
+skip_resnames=['XXX']
 # Dictionary of amino acid charges. Assumes any N-terminal is +1 and any C-terminal is -1.
 AA_charge = {
     'ASP': '-1', 'GLU': '-1', 'HIP': '1', 
@@ -295,6 +298,8 @@ for atom in MM_remove:
 # ---------------------------
 # Get a list of unique residue IDs from the EFP file.
 #   Note that atom IDs do not match between EFP and full structures. However, residue IDs do match
+
+skip_resnames=['LA']
 efp_resis = []
 prevres = '0'
 start = False
@@ -303,8 +308,8 @@ for line in efp_lines:
         if len(line.split()) < 3:
             break
         #only count residues once
-        if line.split()[0] != prevres:
-            efp_resis.append(line.split()[0])
+        if line.split()[0] != prevres and line.split()[2] not in skip_resnames:
+            efp_resis.append([line.split()[0],line.split()[1]])
             prevres = line.split()[0]
     if 'POSITION' in line:
         start = True
@@ -337,8 +342,8 @@ for line in full_lines:
         # Process "C" atoms. This is the "end" of a residue as we would like to define it.
         elif line.split()[2] == 'C':
             prev_co.append(line)
-            # If the current line belongs to the current EFP residue.
-            if line.split()[0] == efp_resis[i]:
+            # If the current resid and resname match the current EFP residue.
+            if line.split()[0] == efp_resis[i][0] and line.split()[1] == efp_resis[i][1]:
                 # standard amino acid fragments (non-terminals, non-cofactors) need two virtual hydrogens.
                 if line.split()[1] in known_amino_acids:
                     vH1 = cut_frag(frag[0], CAs[-2])      #Cut between current C and previous CA
@@ -373,7 +378,7 @@ for line in full_lines:
         # Check that this frag is the current EFP residue (and end of that residue)
         # Check that this frag is not an amino acid (is a cofactor, lipid, etc) [redundant]
         #         No virtual hydrogens are added here
-        if len(frag) > 1 and frag[-1].split()[0] == efp_resis[i]:
+        if len(frag) > 1 and frag[-1].split()[0] == efp_resis[i][0] and frag[-1].split()[1] == efp_resis[i][1]:
             if (frag[0].split()[0] != line.split()[0]) and frag[0].split()[1] not in known_amino_acids:
                 if frag[0].split()[1][1:] not in known_amino_acids:
                     qm_names = []
@@ -387,7 +392,7 @@ for line in full_lines:
                     frag = []
                     i += 1
         # If the current line belongs to the current EFP residue, add it to the fragment.
-        if line.split()[0] == efp_resis[i]:
+        if line.split()[0] == efp_resis[i][0] and line.split()[1] == efp_resis[i][1]:
             if len(prev_co) > 1 and line.split()[1] in known_amino_acids:
                 # Add the previous two "C" or "O" atoms to the fragment if the current fragment is an amino acid
                 frag.append(prev_co[-2])

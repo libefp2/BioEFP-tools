@@ -41,9 +41,10 @@ site = ['361']
 #site=''  
 oldres = 'nan'               # Initial residue number for tracking changes
 
-MAKE_QM_TAIL = 0             # True/false whether to make a tail fragment for the QM residue(s) only.
+MAKE_QM_TAIL = 0             # True/false whether to make a tail fragment for the QM residue(s).
+                             #       - NOTE tails are made for EFP fragments, this flag only applies to a QM BCL
                              # If you plan to include tail in QM region, make this 0
-                             # If you only want headring in QM region/need EFP tail, make this 1
+                             # If you want ONLY the headring in QM region (and need the EFP tail), make this 1
 
 # ---------------------------
 # Global Dictionaries and Lists
