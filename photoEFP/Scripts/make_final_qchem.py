@@ -99,7 +99,6 @@ def build_efp_atom_lists():
     efp_atoms = {}
     efp_dict = {}
     efp_nums={}
-    start_list=[]
     for filename in os.listdir('./'):
         # Skip water and classical region files.
         if filename in ('water.efp', 'prot.efp'):
@@ -115,7 +114,6 @@ def build_efp_atom_lists():
             fragname = filename.split('.')[0]
             efp_atom_start = int(fragname.split('_')[2])
             key = str(efp_atom_start)
-            start_list.append(key)
             efp_dict[key] = fragname
             names=[]
             nums=[]
@@ -402,7 +400,7 @@ def main(g96_filename,efp_filename,qm_filename):
     g96_lines, efp_lines, qm_lines = read_files(g96_filename, efp_filename, qm_filename)
     
     # Build the list/dictionary of EFP atom numbers from all .efp files in the current directory.
-    efp_dict, efp_atoms, efp_nums, start_list = build_efp_atom_lists()
+    efp_dict, efp_atoms, efp_nums = build_efp_atom_lists()
 
     # Build the output list by starting with the header.
     header_lines = build_header('1')
