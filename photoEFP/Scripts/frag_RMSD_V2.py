@@ -12,7 +12,7 @@ import os
 '''
 Sample Execution: python clah_RMSD.py clah_blah.inp
 
-This file takesa GAMESS input file, then searches 'base_directory' for a folder that matches the 
+This file takes a GAMESS input file, then searches 'base_directory' for a folder that matches the 
 fragment type (if it is an amino acid). If no folder is found, a message will be printed.
 If no good match is found, a different message will be printed. Alternatively, you can uncomment
 a line near the end of this file to automatically run GAMESS for an amino acid fragment that did
@@ -20,11 +20,14 @@ not find a good match.
 
 '''
 
-##############   USER DEFINED PATHS!!! ################################
+##############   USER DEFINED PARAMETERS!!! ################################
 # Directory containing the library files. CHANGE
 base_directory = '/depot/lslipche/data/PS1/efpdb/'
+
 # Directory with FlexEFP script
 flex_script_path = '/depot/lslipche/data/PS1/scripts/'
+
+ang_cutoff = 0.3                        # Minimum RMSD allowed for a "good" match (in Angstroms)
 #######################################################################
 
 if len(sys.argv) != 2:
@@ -34,7 +37,6 @@ if len(sys.argv) != 2:
 
 #print(f'Searching fragment library in {base_directory} directory') 
 
-ang_cutoff = 2.5                        # Minimum RMSD allowed for a "good" match (in Angstroms)
 bohr_cutoff = ang_cutoff * 1.8897259886  # Convert Angstrom cutoff to Bohr
 
 #Add to these if there are more 
@@ -290,5 +292,5 @@ if min_rmsd < bohr_cutoff:
 else:
 #    # If no match is found, print a message (or launch GAMESS).
     print('No match, run GAMESS for: ' + inp)
-#    # Uncomment the following line if you want to run GAMESS:
+#    # Uncomment and adjust the following line if you want to run GAMESS:
 #    os.system('gms_slurm -p 20 -q standby -v 2025 ' + inp)
